@@ -79,11 +79,12 @@ func findMultiplierOfHighestDegree(
 //
 //	80				20				1				80
 //
-// returns mode, char_count_indicator, encoded_data
+// returns mode, char_count_indicator, encoded_data, terminator, total_bits
 func encode(
 	str string,
-) (string, string, string) {
+) (string, string, string, string, int) {
 	total_num_data_codewords := 80 * 8
+	terminator := ""
 	char_count_max_bit_long := 8
 	char_count := int64(len(str))
 	// Goes after mode indicator
@@ -122,12 +123,27 @@ func encode(
 		}
 	}
 
+	total_bits := len(BYTE_MODE_INDICATOR) + len(char_count_bin) + len(data_bin_str)
+	if total_bits < total_num_data_codewords {
+		padding := total_num_data_codewords - total_bits
+		for i := 0; i < padding; i++ {
+			terminator += "0"
+		}
+
+	}
+
+	if total_bits > total_num_data_codewords {
+		fmt.Printf("\nTotal num of data codewords exceeds the permitted amount. Got %d, want %d\n", total_bits, total_num_data_codewords)
+		panic("Failed!")
+	}
+
+	total_bits += len(terminator)
 	fmt.Printf("\nBin representation is: %s\n", data_bin_str)
-	return BYTE_MODE_INDICATOR, char_count_bin, data_bin_str
+	return BYTE_MODE_INDICATOR, char_count_bin, data_bin_str, terminator, total_bits
 }
 
 func main() {
 	str := "HELLO WORLD"
-	mode, char_count_indicator, data := encode(str)
-	fmt.Printf("\nMode is: %s\nChar count is: %s\nData is: %s\n", mode, char_count_indicator, data)
+	mode, char_count_indicator, data, terminator, total_bits := encode(str)
+	fmt.Printf("\nMode is: %s\nChar count is: %s\nData is: %s\nTerminator is: %s\nTotal bits: %d\n", mode, char_count_indicator, data, terminator, total_bits)
 }
