@@ -75,10 +75,15 @@ func findMultiplierOfHighestDegree(
 // Version will be 4 = 33x33 pixels
 // The amount of characters using byte encoding is 78
 // char count must be 8 bits in byte mode for versions 1...9
+// total data codewords   	EC codewords per block		n of blocks in group 1  	n of data codewords in each of group 1 blocks
+//
+//	80				20				1				80
+//
 // returns mode, char_count_indicator, encoded_data
 func encode(
 	str string,
 ) (string, string, string) {
+	total_num_data_codewords := 80 * 8
 	char_count_max_bit_long := 8
 	char_count := int64(len(str))
 	// Goes after mode indicator
