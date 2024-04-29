@@ -70,6 +70,49 @@ func findMultiplierOfHighestDegree(
 	return highest_degree_f_x, highest_degree_f
 }
 
+// 20 codewords per block. 1 group and 80 codwrods total Num of blocks 1
+func genMessagePolynomial(
+	codewords []string,
+) string {
+	polynomial := ""
+	codewords_len := len(codewords)
+	for idx, codeword := range codewords {
+		d, err := strconv.ParseInt(codeword, 2, 0)
+		if err != nil {
+			fmt.Printf("\nError, codeword %s failed with: %+v\n", codeword, err)
+			panic("FAIL!!")
+		}
+		if idx < codewords_len-1 {
+			var sign string
+			if idx > 0 {
+				sign = "+"
+			}
+			polynomial += fmt.Sprintf("%s%dx^%d", sign, d, (codewords_len-1)-idx)
+		} else {
+			polynomial += fmt.Sprintf("+%d", d)
+		}
+	}
+
+	return polynomial
+}
+
+func divideIntoCodeWords(
+	data string,
+) []string {
+	// 8 bits. Total = 80
+	var codewords []string
+	for i := 8; i <= len(data); i += 8 {
+		var codeword string
+		for j := i - 8; j < i; j++ {
+			codeword += string(data[j])
+		}
+
+		codewords = append(codewords, codeword)
+	}
+
+	return codewords
+}
+
 // Error correction level L just to keep it simple for now
 // I'll add more later if not lazy :)
 // Version will be 4 = 33x33 pixels
@@ -167,4 +210,7 @@ func main() {
 	str := "HELLO WORLD"
 	mode, char_count_indicator, data, total_bits := encode(str)
 	fmt.Printf("\nMode is: %s\nChar count is: %s\nData is: %s\nTotal bits: %d\n", mode, char_count_indicator, data, total_bits)
+	codewords := divideIntoCodeWords(mode + char_count_indicator + data)
+	fmt.Printf("\nCodewords are: %+v\nAmount of codewords: %d\n", codewords, len(codewords))
+	fmt.Println(genMessagePolynomial(codewords))
 }
