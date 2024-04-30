@@ -70,6 +70,156 @@ func findMultiplierOfHighestDegree(
 	return highest_degree_f_x, highest_degree_f
 }
 
+func getAlphaVal(
+	exp int,
+) int {
+	base := 2
+	curr_exp := -1
+	acc := 0
+
+	for curr_exp < exp {
+		curr_exp++
+		r := acc * base
+		if r >= 256 {
+			acc = r ^ 285
+		} else {
+			if r == 0 {
+				r++
+			}
+
+			acc = r
+		}
+	}
+
+	return acc
+}
+
+// exp and val
+func getExponentAndValFromCoefficient(
+	c int,
+) (int, int) {
+	base := 2
+
+	acc := 0
+
+	exp := -1
+	for {
+		exp++
+		r := acc * base
+		if r >= 256 {
+			acc = r ^ 285
+		} else {
+			if r == 0 {
+				r++
+			}
+
+			acc = r
+		}
+
+		if acc == c {
+			break
+		}
+	}
+
+	return exp, acc
+}
+
+type PolynomialMember struct {
+	Exp         int
+	Coefficient int
+	IsX         bool
+}
+
+func genGeneratorPolynomial(
+	err_c_codewords int,
+) [][]PolynomialMember {
+	//Because ((a^0x - a^m)*(a^0x - a^m+1)) * (a^0x - a^m+1) *...
+	acc := [][]PolynomialMember{
+		{
+			{
+				Exp:         1,
+				Coefficient: 1,
+				IsX:         true,
+			},
+			{
+				Exp:         1,
+				Coefficient: -1,
+				IsX:         false,
+			},
+		},
+		nil,
+	}
+	m := 1
+
+	for i := 1; i < err_c_codewords; i++ {
+		if acc[1] == nil {
+			acc[1] = []PolynomialMember{
+				{
+					Exp:         1,
+					Coefficient: 1,
+					IsX:         true,
+				},
+				{
+					Exp:         1,
+					Coefficient: -getAlphaVal(m),
+					IsX:         false,
+				},
+			}
+			m++
+		}
+
+		var new_acc_zero []PolynomialMember
+		for _, member := range acc[0] {
+			for _, member2 := range acc[1] {
+				is_x_mult := member.IsX && member2.IsX
+				var exp int
+				if is_x_mult {
+					exp = member.Exp + member2.Exp
+				} else {
+					exp = member.Exp
+				}
+
+				c := member.Coefficient * member2.Coefficient
+				new_acc_zero = append(
+					new_acc_zero,
+					PolynomialMember{
+						Exp:         exp,
+						Coefficient: c,
+						IsX:         member.IsX || member2.IsX,
+					},
+				)
+			}
+		}
+
+		acc[0] = new_acc_zero
+		acc[1] = nil
+	}
+
+	i := 0
+	for i < len(acc[0]) {
+		m := acc[0][i]
+
+		for j, m2 := range acc[0] {
+			if m.Exp == m2.Exp && m.IsX == m2.IsX && j != i {
+				new_m := PolynomialMember{
+					Exp:         m.Exp,
+					Coefficient: m.Coefficient + m2.Coefficient,
+					IsX:         m.IsX,
+				}
+				acc[0][i] = new_m
+				acc[0] = append(acc[0][:j], acc[0][j+1:]...)
+				fmt.Printf("\n%+v\n", acc[0])
+				i = -1
+				break
+			}
+		}
+
+		i++
+	}
+
+	return acc
+}
+
 // 20 codewords per block. 1 group and 80 codwrods total Num of blocks 1
 func genMessagePolynomial(
 	codewords []string,
