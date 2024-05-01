@@ -160,7 +160,7 @@ func solveSameMembersAndUpdateAlpha(
 
 func genGeneratorPolynomial(
 	err_c_codewords int,
-) [][]PolynomialMember {
+) []PolynomialMember {
 	//Because ((a^0x - a^m)*(a^0x - a^m+1)) * (a^0x - a^m+1) *...
 	acc := [][]PolynomialMember{
 		{
@@ -226,7 +226,7 @@ func genGeneratorPolynomial(
 		solveSameMembersAndUpdateAlpha(&acc[0])
 	}
 
-	return acc
+	return acc[0]
 }
 
 func getCoefficientIfAlphaBig(
@@ -253,9 +253,10 @@ func getCoefficientIfAlphaBig(
 // 20 codewords per block. 1 group and 80 codwrods total Num of blocks 1
 func genMessagePolynomial(
 	codewords []string,
-) string {
-	polynomial := ""
+) ([]PolynomialMember, string) {
+	polynomial_s := ""
 	codewords_len := len(codewords)
+	var polynomial []PolynomialMember
 	for idx, codeword := range codewords {
 		d, err := strconv.ParseInt(codeword, 2, 0)
 		if err != nil {
@@ -267,13 +268,24 @@ func genMessagePolynomial(
 			if idx > 0 {
 				sign = "+"
 			}
-			polynomial += fmt.Sprintf("%s%dx^%d", sign, d, (codewords_len-1)-idx)
+			exp := (codewords_len - 1) - idx
+			polynomial_s += fmt.Sprintf("%s%dx^%d", sign, d, exp)
+			polynomial = append(polynomial, PolynomialMember{
+				Coefficient: int(d),
+				Exp:         exp,
+				IsX:         true,
+			})
 		} else {
-			polynomial += fmt.Sprintf("+%d", d)
+			polynomial_s += fmt.Sprintf("+%d", d)
+			polynomial = append(polynomial, PolynomialMember{
+				Coefficient: int(d),
+				Exp:         1,
+				IsX:         false,
+			})
 		}
 	}
 
-	return polynomial
+	return polynomial, polynomial_s
 }
 
 func divideIntoCodeWords(
@@ -386,11 +398,73 @@ func encode(
 	return BYTE_MODE_INDICATOR, char_count_bin, data_bin_str, encoded_data_total
 }
 
+func getEcc(
+	msg_p []PolynomialMember,
+	gen_p []PolynomialMember,
+) []PolynomialMember {
+	times_to_divide := len(msg_p)
+
+	//step a || 0
+	b := msg_p
+	var to_xor []PolynomialMember
+	for i := 0; i < times_to_divide; i++ {
+		//Multiply by lead
+		if i%2 == 0 {
+			for _, m := range gen_p {
+				c := getCoefficientIfAlphaBig(m.Coefficient, b[0].Coefficient, false)
+				to_xor = append(to_xor, PolynomialMember{
+					Exp:         m.Exp,
+					Coefficient: c,
+					IsX:         true,
+				})
+			}
+			continue
+		}
+
+		//Xor to_xor with b
+		for i, m := range b {
+			if i < len(to_xor) {
+				c := getCoefficientIfAlphaBig(m.Coefficient, to_xor[i].Coefficient, true)
+				m.Coefficient = c
+			}
+		}
+		//Remove lead
+		b = append(b[:0], b[1:]...)
+
+	}
+
+	return b
+}
+
 func main() {
 	str := "HELLO WORLD"
 	mode, char_count_indicator, data, total_bits := encode(str)
 	fmt.Printf("\nMode is: %s\nChar count is: %s\nData is: %s\nTotal bits: %d\n", mode, char_count_indicator, data, total_bits)
 	codewords := divideIntoCodeWords(mode + char_count_indicator + data)
-	fmt.Printf("\nCodewords are: %+v\nAmount of codewords: %d\n", codewords, len(codewords))
-	fmt.Println(genMessagePolynomial(codewords))
+	codewords_needed := len(codewords)
+	fmt.Printf("\nCodewords are: %+v\nAmount of codewords: %d\n", codewords, codewords_needed)
+	msg_p, msg_p_s := genMessagePolynomial(codewords)
+	fmt.Printf("\nMsg Polynomial is %+v\n", msg_p)
+	fmt.Printf("\nMsg Polynomial string is %+v\n", msg_p_s)
+
+	gen_p := genGeneratorPolynomial(codewords_needed)
+	fmt.Printf("\nGen Polynomial is %+v\n", gen_p)
+
+	// Find if p exp is < codewords | genPolyMaxExp
+	if msg_p[0].Exp < codewords_needed {
+		increase_msg_by_exp := codewords_needed - msg_p[0].Exp
+		for i := range msg_p {
+			msg_p[i].Exp += increase_msg_by_exp
+		}
+
+	}
+
+	if gen_p[0].Exp < codewords_needed {
+		increase_gen_by_exp := codewords_needed - gen_p[0].Exp
+		for i := range gen_p {
+			gen_p[i].Exp += increase_gen_by_exp
+		}
+	}
+
+	fmt.Printf("\nECC POLYNOMIAL IS %+v\n", getEcc(msg_p, gen_p))
 }

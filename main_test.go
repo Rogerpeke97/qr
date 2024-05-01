@@ -150,7 +150,7 @@ func genPolynomialString(
 func TestGenGeneratorPolynomial(t *testing.T) {
 	r := genGeneratorPolynomial(80)
 	expect := "1x^80 + 84x^79 + 135x^78 + 16x^77 + 169x^76 + 62x^75 + 204x^74 + 151x^73 + 126x^72 + 108x^71 + 91x^70 + 227x^69 + 174x^68 + 59x^67 + 51x^66 + 79x^65 + 252x^64 + 110x^63 + 45x^62 + 78x^61 + 141x^60 + 107x^59 + 166x^58 + 132x^57 + 131x^56 + 154x^55 + 37x^54 + 63x^53 + 41x^52 + 169x^51 + 231x^50 + 153x^49 + 64x^48 + 117x^47 + 90x^46 + 183x^45 + 142x^44 + 188x^43 + 193x^42 + 173x^41 + 189x^40 + 30x^39 + 224x^38 + 40x^37 + 185x^36 + 119x^35 + 11x^34 + 95x^33 + 133x^32 + 19x^31 + 52x^30 + 22x^29 + 15x^28 + 246x^27 + 236x^26 + 93x^25 + 203x^24 + 81x^23 + 134x^22 + 160x^21 + 131x^20 + 99x^19 + 72x^18 + 43x^17 + 143x^16 + 188x^15 + 66x^14 + 242x^13 + 104x^12 + 123x^11 + 126x^10 + 164x^9 + 77x^8 + 49x^7 + 29x^6 + 137x^5 + 241x^4 + 236x^3 + 89x^2 + 198x^1 + 17x^0"
-	r_s := genPolynomialString(r[0])
+	r_s := genPolynomialString(r)
 	if r_s != expect {
 		fmt.Printf("\nWrong value. Got: %s. Expected %s\n", r_s, expect)
 		t.Error("Fail!")
@@ -158,7 +158,7 @@ func TestGenGeneratorPolynomial(t *testing.T) {
 
 	r = genGeneratorPolynomial(30)
 	expect = "1x^30 + 212x^29 + 246x^28 + 77x^27 + 73x^26 + 195x^25 + 192x^24 + 75x^23 + 98x^22 + 5x^21 + 70x^20 + 103x^19 + 177x^18 + 22x^17 + 217x^16 + 138x^15 + 51x^14 + 181x^13 + 246x^12 + 72x^11 + 25x^10 + 18x^9 + 46x^8 + 228x^7 + 74x^6 + 216x^5 + 195x^4 + 11x^3 + 106x^2 + 130x^1 + 150x^0"
-	r_s = genPolynomialString(r[0])
+	r_s = genPolynomialString(r)
 	if r_s != expect {
 		fmt.Printf("\nWrong value. Got: %s. Expected %s\n", r_s, expect)
 		t.Error("Fail!")
@@ -166,7 +166,7 @@ func TestGenGeneratorPolynomial(t *testing.T) {
 
 	r = genGeneratorPolynomial(20)
 	expect = "1x^20 + 152x^19 + 185x^18 + 240x^17 + 5x^16 + 111x^15 + 99x^14 + 6x^13 + 220x^12 + 112x^11 + 150x^10 + 69x^9 + 36x^8 + 187x^7 + 22x^6 + 228x^5 + 198x^4 + 121x^3 + 121x^2 + 165x^1 + 174x^0"
-	r_s = genPolynomialString(r[0])
+	r_s = genPolynomialString(r)
 	if r_s != expect {
 		fmt.Printf("\nWrong value. Got: %s. Expected %s\n", r_s, expect)
 		t.Error("Fail!")
