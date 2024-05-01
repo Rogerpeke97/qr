@@ -130,6 +130,34 @@ type PolynomialMember struct {
 	IsX         bool
 }
 
+func solveSameMembersAndUpdateAlpha(
+	polynomial *[]PolynomialMember,
+) {
+	i := 0
+	// make sure to solve all members of the same family
+	for i < len(*polynomial) {
+		m := (*polynomial)[i]
+
+		for j, m2 := range *polynomial {
+			if m.Exp == m2.Exp && m.IsX == m2.IsX && j != i {
+				new_m := PolynomialMember{
+					Exp:         m.Exp,
+					Coefficient: m.Coefficient + m2.Coefficient,
+					IsX:         m.IsX,
+				}
+				(*polynomial)[i] = new_m
+				*polynomial = append((*polynomial)[:j], (*polynomial)[j+1:]...)
+				i = -1
+				break
+			}
+		}
+
+		i++
+	}
+
+	updateCoefficientIfAlphaBig(polynomial)
+}
+
 func genGeneratorPolynomial(
 	err_c_codewords int,
 ) [][]PolynomialMember {
@@ -195,29 +223,32 @@ func genGeneratorPolynomial(
 		acc[1] = nil
 	}
 
-	i := 0
-	for i < len(acc[0]) {
-		m := acc[0][i]
+	return acc
+}
 
-		for j, m2 := range acc[0] {
-			if m.Exp == m2.Exp && m.IsX == m2.IsX && j != i {
-				new_m := PolynomialMember{
-					Exp:         m.Exp,
-					Coefficient: m.Coefficient + m2.Coefficient,
-					IsX:         m.IsX,
-				}
-				acc[0][i] = new_m
-				acc[0] = append(acc[0][:j], acc[0][j+1:]...)
-				fmt.Printf("\n%+v\n", acc[0])
-				i = -1
-				break
-			}
+func updateCoefficientIfAlphaBig(
+	polynomial *[]PolynomialMember,
+) {
+	// TODO: Should work with alpha^n instead of coefficients. Freaking hugeee
+	for _, m := range *polynomial {
+		c := m.Coefficient
+		is_negative := false
+		if c < 0 {
+			is_negative = true
+			c = c * -1
 		}
 
-		i++
-	}
+		exp, _ := getExponentAndValFromCoefficient(c)
+		if exp > 255 {
+			exp = exp % 255
+			if is_negative {
+				m.Coefficient = getAlphaVal(exp) * -1
+			} else {
+				m.Coefficient = getAlphaVal(exp)
+			}
 
-	return acc
+		}
+	}
 }
 
 // 20 codewords per block. 1 group and 80 codwrods total Num of blocks 1

@@ -54,10 +54,26 @@ func TestGetAlphaVal(t *testing.T) {
 	}
 }
 
+func TestGetExponentAndValFromCoefficient(t *testing.T) {
+	exp, val := getExponentAndValFromCoefficient(7)
+	if exp != 198 {
+		fmt.Println(val)
+		fmt.Printf("\nWrong value. Got: %d. Expected %d\n", exp, 198)
+		t.Error("LOL")
+	}
+
+	exp, val = getExponentAndValFromCoefficient(14)
+	if exp != 199 {
+		fmt.Println(val)
+		fmt.Printf("\nWrong value. Got: %d. Expected %d\n", exp, 199)
+		t.Error("LOL")
+	}
+}
+
 func TestGenGeneratorPolynomial(t *testing.T) {
-	// r := genGeneratorPolynomial(3)
-	// if len(r) > 0 {
-	// 	fmt.Printf("\nGen polynomial is %+v\n", r)
-	// 	t.Error("LOL")
-	// }
+	r := genGeneratorPolynomial(4)
+	if len(r) > 0 {
+		fmt.Printf("\nGen polynomial is %+v\n", r)
+		t.Error("LOL")
+	}
 }
