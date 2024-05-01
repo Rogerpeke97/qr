@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 )
 
@@ -140,9 +141,10 @@ func solveSameMembersAndUpdateAlpha(
 
 		for j, m2 := range *polynomial {
 			if m.Exp == m2.Exp && m.IsX == m2.IsX && j != i {
+				c := getCoefficientIfAlphaBig(m.Coefficient, m2.Coefficient, true)
 				new_m := PolynomialMember{
 					Exp:         m.Exp,
-					Coefficient: m.Coefficient + m2.Coefficient,
+					Coefficient: c,
 					IsX:         m.IsX,
 				}
 				(*polynomial)[i] = new_m
@@ -154,8 +156,6 @@ func solveSameMembersAndUpdateAlpha(
 
 		i++
 	}
-
-	updateCoefficientIfAlphaBig(polynomial)
 }
 
 func genGeneratorPolynomial(
@@ -171,7 +171,7 @@ func genGeneratorPolynomial(
 			},
 			{
 				Exp:         1,
-				Coefficient: -1,
+				Coefficient: 1,
 				IsX:         false,
 			},
 		},
@@ -189,10 +189,11 @@ func genGeneratorPolynomial(
 				},
 				{
 					Exp:         1,
-					Coefficient: -getAlphaVal(m),
+					Coefficient: getAlphaVal(m),
 					IsX:         false,
 				},
 			}
+			// fmt.Printf("\nAlpha VAL is: %d for m: %d\n", getAlphaVal(m), m)
 			m++
 		}
 
@@ -206,8 +207,8 @@ func genGeneratorPolynomial(
 				} else {
 					exp = member.Exp
 				}
+				c := getCoefficientIfAlphaBig(member.Coefficient, member2.Coefficient, false)
 
-				c := member.Coefficient * member2.Coefficient
 				new_acc_zero = append(
 					new_acc_zero,
 					PolynomialMember{
@@ -219,36 +220,34 @@ func genGeneratorPolynomial(
 			}
 		}
 
+		// Check if coefficient in alpha exp the exp is not bigger than 255
 		acc[0] = new_acc_zero
 		acc[1] = nil
+		solveSameMembersAndUpdateAlpha(&acc[0])
 	}
 
 	return acc
 }
 
-func updateCoefficientIfAlphaBig(
-	polynomial *[]PolynomialMember,
-) {
-	// TODO: Should work with alpha^n instead of coefficients. Freaking hugeee
-	for _, m := range *polynomial {
-		c := m.Coefficient
-		is_negative := false
-		if c < 0 {
-			is_negative = true
-			c = c * -1
-		}
-
-		exp, _ := getExponentAndValFromCoefficient(c)
-		if exp > 255 {
-			exp = exp % 255
-			if is_negative {
-				m.Coefficient = getAlphaVal(exp) * -1
-			} else {
-				m.Coefficient = getAlphaVal(exp)
-			}
-
-		}
+func getCoefficientIfAlphaBig(
+	c1 int,
+	c2 int,
+	is_sum bool,
+) int {
+	if is_sum {
+		return c1 ^ c2
 	}
+
+	a_exp, _ := getExponentAndValFromCoefficient(c1)
+	b_exp, _ := getExponentAndValFromCoefficient(c2)
+
+	n := a_exp + b_exp
+	if n > 255 {
+		b := int(math.Floor(float64(n) / 256))
+		n = (n % 256) + b
+	}
+
+	return getAlphaVal(n)
 }
 
 // 20 codewords per block. 1 group and 80 codwrods total Num of blocks 1

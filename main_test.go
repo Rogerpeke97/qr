@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -52,6 +55,12 @@ func TestGetAlphaVal(t *testing.T) {
 		fmt.Printf("\nWrong value. Got: %d. Expected %d\n", r, 205)
 		t.Error("LOL")
 	}
+
+	r = getAlphaVal(245)
+	if r != 233 {
+		fmt.Printf("\nWrong value. Got: %d. Expected %d\n", r, 233)
+		t.Error("LOL")
+	}
 }
 
 func TestGetExponentAndValFromCoefficient(t *testing.T) {
@@ -68,12 +77,70 @@ func TestGetExponentAndValFromCoefficient(t *testing.T) {
 		fmt.Printf("\nWrong value. Got: %d. Expected %d\n", exp, 199)
 		t.Error("LOL")
 	}
+
+	exp, val = getExponentAndValFromCoefficient(127)
+	if exp != 87 {
+		fmt.Println(val)
+		fmt.Printf("\nWrong value. Got: %d. Expected %d\n", exp, 87)
+		t.Error("LOL")
+	}
+
+	exp, val = getExponentAndValFromCoefficient(120)
+	if exp != 78 {
+		fmt.Println(val)
+		fmt.Printf("\nWrong value. Got: %d. Expected %d\n", exp, 78)
+		t.Error("LOL")
+	}
 }
 
+func TestGetCoefficientIfAlphaBig(t *testing.T) {
+	c := getCoefficientIfAlphaBig(250, 250, true)
+	if c != 0 {
+		fmt.Printf("\nWrong value. Got: %d. Expected %d\n", c, 0)
+		t.Error("LOL")
+	}
+
+	c = getCoefficientIfAlphaBig(250, 250, false)
+	if c != 243 {
+		fmt.Printf("\nWrong value. Got: %d. Expected %d\n", c, 243)
+		t.Error("LOL")
+	}
+
+}
+
+/*
+(7)
+x^7 + 127x^6 + 122x^5 + 154x^4 + 164x^3 + 11x^2 + 68x + 117
+
+(10)
+α0x10 + α251x9 + α67x8 + α46x7 + α61x6 + α118x5 + α70x4 + α64x3 + α94x2 + α32x + α45
+
+x^10 + 216x^9 + 194x^8 + 159x^7 + 111x^6 + 199x^5 + 94x^4 + 95x^3 + 113x^2 + 157x + 193
+*/
 func TestGenGeneratorPolynomial(t *testing.T) {
-	r := genGeneratorPolynomial(4)
+	r := genGeneratorPolynomial(30)
 	if len(r) > 0 {
 		fmt.Printf("\nGen polynomial is %+v\n", r)
 		t.Error("LOL")
 	}
+}
+
+// To parse and convert into x form
+func parseEquation(equation string) string {
+	re := regexp.MustCompile(`α(\d+)`)
+	matches := re.FindAllStringSubmatch(equation, -1)
+
+	var terms []string
+	exponent := len(matches) - 1
+	for _, match := range matches {
+		alphaVal, _ := strconv.Atoi(match[1])
+		coefficient := getAlphaVal(alphaVal)
+		term := fmt.Sprintf("%dx^%d", coefficient, exponent)
+		terms = append(terms, term)
+		if exponent > 0 {
+			exponent--
+		}
+	}
+
+	return strings.Join(terms, " + ")
 }
