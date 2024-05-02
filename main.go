@@ -2,7 +2,11 @@ package main
 
 import (
 	"fmt"
+	"image"
+	"image/color"
+	"image/png"
 	"math"
+	"os"
 	"strconv"
 )
 
@@ -12,6 +16,8 @@ var ascii_integer_min_max = []int{48, 57}
 
 // Encoded data starts with the mode
 var BYTE_MODE_INDICATOR = "0100"
+var WIDTH = 32
+var HEIGHT = 32
 
 // x and degree
 func findMultiplierOfHighestDegree(
@@ -253,7 +259,7 @@ func getCoefficientIfAlphaBig(
 	return getAlphaVal(n)
 }
 
-// 20 codewords per block. 1 group and 80 codwrods total Num of blocks 1
+// 20 EC codewords per block. 1 group and 80 codwrods total Num of blocks 1
 func genMessagePolynomial(
 	codewords []string,
 ) ([]PolynomialMember, string) {
@@ -455,31 +461,55 @@ func getEcc(
 	return b
 }
 
+func genQrImage() {
+	up_left := image.Point{0, 0}
+	low_right := image.Point{WIDTH, HEIGHT}
+	img := image.NewRGBA(image.Rectangle{up_left, low_right})
+
+	cyan := color.RGBA{100, 200, 200, 0xff}
+
+	for x := 0; x < WIDTH; x++ {
+		for y := 0; y < HEIGHT; y++ {
+			switch {
+			case x < WIDTH/2 && y < HEIGHT/2:
+				img.Set(x, y, cyan)
+			case x >= WIDTH/2 && y >= HEIGHT/2:
+				img.Set(x, y, color.White)
+			default:
+			}
+		}
+	}
+
+	f, _ := os.Create("image.png")
+	png.Encode(f, img)
+}
+
 func main() {
 	str := "HELLO WORLD"
 	mode, char_count_indicator, data, total_bits := encode(str)
 	fmt.Printf("\nMode is: %s\nChar count is: %s\nData is: %s\nTotal bits: %d\n", mode, char_count_indicator, data, total_bits)
 	codewords := divideIntoCodeWords(mode + char_count_indicator + data)
-	codewords_needed := len(codewords)
-	fmt.Printf("\nCodewords are: %+v\nAmount of codewords: %d\n", codewords, codewords_needed)
+	//4-L requires 20 EC codewords per block
+	ec_codewords_needed := 20
+	fmt.Printf("\nCodewords are: %+v\nAmount of codewords: %d\n", codewords, len(codewords))
 	msg_p, msg_p_s := genMessagePolynomial(codewords)
 	fmt.Printf("\nMsg Polynomial is %+v\n", msg_p)
 	fmt.Printf("\nMsg Polynomial string is %+v\n", msg_p_s)
 
-	gen_p := genGeneratorPolynomial(codewords_needed)
+	gen_p := genGeneratorPolynomial(ec_codewords_needed)
 	fmt.Printf("\nGen Polynomial is %+v\n", gen_p)
 
 	// Find if p exp is < codewords | genPolyMaxExp
-	if msg_p[0].Exp < codewords_needed {
-		increase_msg_by_exp := codewords_needed - msg_p[0].Exp
+	if msg_p[0].Exp < ec_codewords_needed {
+		increase_msg_by_exp := ec_codewords_needed - msg_p[0].Exp
 		for i := range msg_p {
 			msg_p[i].Exp += increase_msg_by_exp
 		}
 
 	}
 
-	if gen_p[0].Exp < codewords_needed {
-		increase_gen_by_exp := codewords_needed - gen_p[0].Exp
+	if gen_p[0].Exp < ec_codewords_needed {
+		increase_gen_by_exp := ec_codewords_needed - gen_p[0].Exp
 		for i := range gen_p {
 			gen_p[i].Exp += increase_gen_by_exp
 		}
@@ -487,4 +517,5 @@ func main() {
 
 	fmt.Printf("\nECC POLYNOMIAL IS %+v\n", getEcc(msg_p, gen_p))
 
+	genQrImage()
 }

@@ -187,6 +187,7 @@ func TestGenGeneratorPolynomial(t *testing.T) {
 }
 
 func TestGenEcc(t *testing.T) {
+	// 1-M QR
 	msg_p := []PolynomialMember{
 		{Exp: 25, Coefficient: 32, IsX: true},
 		{Exp: 24, Coefficient: 91, IsX: true},
@@ -205,20 +206,8 @@ func TestGenEcc(t *testing.T) {
 		{Exp: 11, Coefficient: 236, IsX: true},
 		{Exp: 10, Coefficient: 17, IsX: true},
 	}
-	gen_p := []PolynomialMember{
-		{Exp: 25, Coefficient: 1, IsX: true},
-		{Exp: 24, Coefficient: 216, IsX: true},
-		{Exp: 23, Coefficient: 194, IsX: true},
-		{Exp: 22, Coefficient: 159, IsX: true},
-		{Exp: 21, Coefficient: 111, IsX: true},
-		{Exp: 20, Coefficient: 199, IsX: true},
-		{Exp: 19, Coefficient: 94, IsX: true},
-		{Exp: 18, Coefficient: 95, IsX: true},
-		{Exp: 17, Coefficient: 113, IsX: true},
-		{Exp: 16, Coefficient: 157, IsX: true},
-		{Exp: 15, Coefficient: 193, IsX: true},
-	}
 
+	gen_p := genGeneratorPolynomial(10)
 	r := getEcc(msg_p, gen_p)
 	r_s := genPolynomialString(r)
 	expect := "196x^9 + 35x^8 + 39x^7 + 119x^6 + 235x^5 + 215x^4 + 231x^3 + 226x^2 + 93x^1 + 23x^0"
