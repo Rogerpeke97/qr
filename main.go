@@ -456,14 +456,14 @@ func getEcc(
 func addFinderPatters(
 	img *image.RGBA,
 ) {
-	var curr_finder_pattern_color color.Gray16
-	var finder_pattern_start_points = [][]int{{0, 0}, {0, HEIGHT - 7}, {WIDTH - 7, 0}}
+	var curr_fp_color color.Gray16
+	var fp_start_points = [][]int{{0, 0}, {0, HEIGHT - 7}, {WIDTH - 7, 0}}
 
 	for x := 0; x < WIDTH; x++ {
 		for y := 0; y < HEIGHT; y++ {
 			has_to_paint := false
 			to_reduce := []int{0, 0}
-			for _, fp := range finder_pattern_start_points {
+			for _, fp := range fp_start_points {
 				if x >= fp[0] && x < fp[0]+7 {
 					if y >= fp[1] && y < fp[1]+7 {
 						has_to_paint = true
@@ -476,16 +476,16 @@ func addFinderPatters(
 				reduced_x := x - to_reduce[0]
 				reduced_y := y - to_reduce[1]
 				if reduced_y%6 == 0 {
-					curr_finder_pattern_color = color.Black
+					curr_fp_color = color.Black
 				} else {
 					is_inner_square := reduced_x > 1 && reduced_x < 5 && reduced_y > 1 && reduced_y < 5
 					if reduced_x%6 == 0 || is_inner_square {
-						curr_finder_pattern_color = color.Black
+						curr_fp_color = color.Black
 					} else {
-						curr_finder_pattern_color = color.White
+						curr_fp_color = color.White
 					}
 				}
-				img.Set(x, y, curr_finder_pattern_color)
+				img.Set(x, y, curr_fp_color)
 			}
 		}
 	}
