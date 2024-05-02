@@ -10,6 +10,12 @@ import (
 	"strconv"
 )
 
+type PolynomialMember struct {
+	Exp         int
+	Coefficient int
+	IsX         bool
+}
+
 var power_of_code = byte('^')
 var x_code = byte('x')
 var ascii_integer_min_max = []int{48, 57}
@@ -132,12 +138,6 @@ func getExponentAndValFromCoefficient(
 	}
 
 	return exp, acc
-}
-
-type PolynomialMember struct {
-	Exp         int
-	Coefficient int
-	IsX         bool
 }
 
 func solveSameMembersAndUpdateAlpha(
@@ -411,23 +411,16 @@ func getEcc(
 	msg_p []PolynomialMember,
 	gen_p []PolynomialMember,
 ) []PolynomialMember {
-	//step a || 0
 	b := msg_p
 	steps := len(msg_p) * 2
 
 	var to_xor []PolynomialMember
 
 	for i := 0; i <= steps; i++ {
-		// fmt.Printf("\nSTILL RUNNING ON IDX: %d\n", i)
-		// fmt.Printf("\nb IS: %+v\n", b)
-		// fmt.Printf("\ngen_p IS: %+v\n", gen_p)
 		//Multiply by lead
 		if i%2 == 0 {
 			for k, m := range gen_p {
-				// fmt.Println("HERE")
-				// fmt.Println(m.Coefficient, b[0].Coefficient)
 				c := getCoefficientIfAlphaBig(m.Coefficient, b[0].Coefficient, false)
-				// fmt.Printf("\nC IS %d\n", c)
 				to_xor = append(to_xor, PolynomialMember{
 					Exp:         b[0].Exp - k,
 					Coefficient: c,
@@ -437,7 +430,6 @@ func getEcc(
 			continue
 		}
 
-		// fmt.Printf("\nto_xor IS: %+v\n", to_xor)
 		//Xor to_xor with b
 		for j := range to_xor {
 			if j < len(b) {
@@ -531,6 +523,7 @@ func main() {
 
 		final_bin += bin
 	}
+
 	//Remainder bits for ver 4 are 7
 	final_bin += "0000000"
 	fmt.Printf("\nECC POLYNOMIAL IS %+v\n", ecc)
