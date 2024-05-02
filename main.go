@@ -510,7 +510,7 @@ func addFinderPatterns(
 	x int,
 	y int,
 ) {
-	var curr_fp_color color.Gray16
+	var curr_fp_color color.Color
 	var fp_start_points = [][]int{{0, 0}, {0, HEIGHT - 7}, {WIDTH - 7, 0}}
 
 	has_to_paint := false
