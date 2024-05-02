@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"math"
 	"os"
+	"os/exec"
 	"strconv"
 )
 
@@ -583,4 +584,11 @@ func main() {
 	fmt.Printf("\nFINAL MESSAGE: %s\n", final_bin)
 
 	genQrImage()
+	cmd := "eog image.png"
+	_, err := exec.Command("sh", "-c", cmd).CombinedOutput()
+	if err != nil {
+		fmt.Println(err)
+		panic("Could not open image :(")
+	}
+
 }
