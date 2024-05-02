@@ -23,8 +23,8 @@ var ascii_integer_min_max = []int{48, 57}
 
 // Encoded data starts with the mode
 var BYTE_MODE_INDICATOR = "0100"
-var WIDTH = 32
-var HEIGHT = 32
+var WIDTH = 33
+var HEIGHT = 33
 
 // x and degree
 func findMultiplierOfHighestDegree(
@@ -454,67 +454,101 @@ func getEcc(
 	return b
 }
 
+func addAlignmentPatterns(
+	img *image.RGBA,
+	x int,
+	y int,
+) {
+	//ROW AND COL FOR VER 4 (6, 26)
+	row_col := []int{26 - 2, 26 - 2}
+
+	if x >= row_col[0] && x < row_col[0]+5 {
+		if y >= row_col[1] && y < row_col[1]+5 {
+			if x == row_col[0]+2 && y == row_col[1]+2 {
+				img.Set(x, y, color.Black)
+				return
+			}
+
+			if x >= row_col[0]+1 && x < row_col[0]+4 && y >= row_col[1]+1 && y < row_col[1]+4 {
+				img.Set(x, y, color.White)
+				return
+			}
+
+			img.Set(x, y, color.Black)
+		}
+	}
+
+}
+
 func addSeparators(
 	img *image.RGBA,
+	x int,
+	y int,
 ) {
 	var sp_start_points = [][]int{{0, 7}, {0, HEIGHT - 8}}
 
-	for x := 0; x < WIDTH; x++ {
-		for y := 0; y < HEIGHT; y++ {
-			has_to_paint := false
-			for _, sp := range sp_start_points {
-				if x >= sp[0] && x < sp[0]+8 {
-					if (y >= sp[1] && y < sp[1]+1) || (x == 7 && (y < 8 || y > HEIGHT-8)) {
-						has_to_paint = true
-					}
-				}
+	has_to_paint := false
+	for _, sp := range sp_start_points {
+		if x >= sp[0] && x < sp[0]+8 {
+			if (y >= sp[1] && y < sp[1]+1) || (x == 7 && (y < 8 || y > HEIGHT-8)) {
+				has_to_paint = true
 			}
+		}
+	}
 
-			if has_to_paint {
-				img.Set(x, y, color.White)
-				//the opposite of the first sp
-				if y < 8 {
-					img.Set(WIDTH-(x+1), y, color.White)
-				}
-			}
+	if has_to_paint {
+		img.Set(x, y, color.White)
+		//the opposite of the first sp
+		if y < 8 {
+			img.Set(WIDTH-(x+1), y, color.White)
 		}
 	}
 }
 
-func addFinderPatters(
+func addFinderPatterns(
 	img *image.RGBA,
+	x int,
+	y int,
 ) {
 	var curr_fp_color color.Gray16
 	var fp_start_points = [][]int{{0, 0}, {0, HEIGHT - 7}, {WIDTH - 7, 0}}
 
+	has_to_paint := false
+	to_reduce := []int{0, 0}
+	for _, fp := range fp_start_points {
+		if x >= fp[0] && x < fp[0]+7 {
+			if y >= fp[1] && y < fp[1]+7 {
+				has_to_paint = true
+				to_reduce[0] = fp[0]
+				to_reduce[1] = fp[1]
+			}
+		}
+	}
+	if has_to_paint {
+		reduced_x := x - to_reduce[0]
+		reduced_y := y - to_reduce[1]
+		if reduced_y%6 == 0 {
+			curr_fp_color = color.Black
+		} else {
+			is_inner_square := reduced_x > 1 && reduced_x < 5 && reduced_y > 1 && reduced_y < 5
+			if reduced_x%6 == 0 || is_inner_square {
+				curr_fp_color = color.Black
+			} else {
+				curr_fp_color = color.White
+			}
+		}
+		img.Set(x, y, curr_fp_color)
+	}
+}
+
+func addPatterns(
+	img *image.RGBA,
+) {
 	for x := 0; x < WIDTH; x++ {
 		for y := 0; y < HEIGHT; y++ {
-			has_to_paint := false
-			to_reduce := []int{0, 0}
-			for _, fp := range fp_start_points {
-				if x >= fp[0] && x < fp[0]+7 {
-					if y >= fp[1] && y < fp[1]+7 {
-						has_to_paint = true
-						to_reduce[0] = fp[0]
-						to_reduce[1] = fp[1]
-					}
-				}
-			}
-			if has_to_paint {
-				reduced_x := x - to_reduce[0]
-				reduced_y := y - to_reduce[1]
-				if reduced_y%6 == 0 {
-					curr_fp_color = color.Black
-				} else {
-					is_inner_square := reduced_x > 1 && reduced_x < 5 && reduced_y > 1 && reduced_y < 5
-					if reduced_x%6 == 0 || is_inner_square {
-						curr_fp_color = color.Black
-					} else {
-						curr_fp_color = color.White
-					}
-				}
-				img.Set(x, y, curr_fp_color)
-			}
+			addFinderPatterns(img, x, y)
+			addSeparators(img, x, y)
+			addAlignmentPatterns(img, x, y)
 		}
 	}
 }
@@ -523,8 +557,7 @@ func genQrImage() {
 	up_left := image.Point{0, 0}
 	low_right := image.Point{WIDTH, HEIGHT}
 	img := image.NewRGBA(image.Rectangle{up_left, low_right})
-	addFinderPatters(img)
-	addSeparators(img)
+	addPatterns(img)
 
 	f, _ := os.Create("image.png")
 	png.Encode(f, img)
