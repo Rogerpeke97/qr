@@ -91,6 +91,13 @@ func TestGetExponentAndValFromCoefficient(t *testing.T) {
 		fmt.Printf("\nWrong value. Got: %d. Expected %d\n", exp, 78)
 		t.Error("Fail!")
 	}
+
+	exp, val = getExponentAndValFromCoefficient(0)
+	if exp != 0 {
+		fmt.Println(val)
+		fmt.Printf("\nWrong value. Got: %d. Expected %d\n", exp, 0)
+		t.Error("Fail!")
+	}
 }
 
 func TestGetCoefficientIfAlphaBig(t *testing.T) {
@@ -106,6 +113,11 @@ func TestGetCoefficientIfAlphaBig(t *testing.T) {
 		t.Error("Fail!")
 	}
 
+	c = getCoefficientIfAlphaBig(1, 0, false)
+	if c != 1 {
+		fmt.Printf("\nWrong value. Got: %d. Expected %d\n", c, 1)
+		t.Error("Fail!")
+	}
 }
 
 // To parse and convert into x form
@@ -172,4 +184,46 @@ func TestGenGeneratorPolynomial(t *testing.T) {
 		t.Error("Fail!")
 	}
 
+}
+
+func TestGenEcc(t *testing.T) {
+	msg_p := []PolynomialMember{
+		{Exp: 25, Coefficient: 32, IsX: true},
+		{Exp: 24, Coefficient: 91, IsX: true},
+		{Exp: 23, Coefficient: 11, IsX: true},
+		{Exp: 22, Coefficient: 120, IsX: true},
+		{Exp: 21, Coefficient: 209, IsX: true},
+		{Exp: 20, Coefficient: 114, IsX: true},
+		{Exp: 19, Coefficient: 220, IsX: true},
+		{Exp: 18, Coefficient: 77, IsX: true},
+		{Exp: 17, Coefficient: 67, IsX: true},
+		{Exp: 16, Coefficient: 64, IsX: true},
+		{Exp: 15, Coefficient: 236, IsX: true},
+		{Exp: 14, Coefficient: 17, IsX: true},
+		{Exp: 13, Coefficient: 236, IsX: true},
+		{Exp: 12, Coefficient: 17, IsX: true},
+		{Exp: 11, Coefficient: 236, IsX: true},
+		{Exp: 10, Coefficient: 17, IsX: true},
+	}
+	gen_p := []PolynomialMember{
+		{Exp: 25, Coefficient: 1, IsX: true},
+		{Exp: 24, Coefficient: 216, IsX: true},
+		{Exp: 23, Coefficient: 194, IsX: true},
+		{Exp: 22, Coefficient: 159, IsX: true},
+		{Exp: 21, Coefficient: 111, IsX: true},
+		{Exp: 20, Coefficient: 199, IsX: true},
+		{Exp: 19, Coefficient: 94, IsX: true},
+		{Exp: 18, Coefficient: 95, IsX: true},
+		{Exp: 17, Coefficient: 113, IsX: true},
+		{Exp: 16, Coefficient: 157, IsX: true},
+		{Exp: 15, Coefficient: 193, IsX: true},
+	}
+
+	r := getEcc(msg_p, gen_p)
+	r_s := genPolynomialString(r)
+	expect := "196x^9 + 35x^8 + 39x^7 + 119x^6 + 235x^5 + 215x^4 + 231x^3 + 226x^2 + 93x^1 + 23x^0"
+	if r_s != expect {
+		fmt.Printf("\nWrong value. Got: %s. Expected %s\n", r_s, expect)
+		t.Error("Fail!")
+	}
 }

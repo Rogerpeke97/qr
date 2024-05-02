@@ -99,6 +99,9 @@ func getAlphaVal(
 func getExponentAndValFromCoefficient(
 	c int,
 ) (int, int) {
+	if c == 0 {
+		return 0, 0
+	}
 	base := 2
 
 	acc := 0
@@ -402,18 +405,25 @@ func getEcc(
 	msg_p []PolynomialMember,
 	gen_p []PolynomialMember,
 ) []PolynomialMember {
-	times_to_divide := len(msg_p)
-
 	//step a || 0
 	b := msg_p
+	steps := len(msg_p) * 2
+
 	var to_xor []PolynomialMember
-	for i := 0; i < times_to_divide; i++ {
+
+	for i := 0; i <= steps; i++ {
+		// fmt.Printf("\nSTILL RUNNING ON IDX: %d\n", i)
+		// fmt.Printf("\nb IS: %+v\n", b)
+		// fmt.Printf("\ngen_p IS: %+v\n", gen_p)
 		//Multiply by lead
 		if i%2 == 0 {
-			for _, m := range gen_p {
+			for k, m := range gen_p {
+				// fmt.Println("HERE")
+				// fmt.Println(m.Coefficient, b[0].Coefficient)
 				c := getCoefficientIfAlphaBig(m.Coefficient, b[0].Coefficient, false)
+				// fmt.Printf("\nC IS %d\n", c)
 				to_xor = append(to_xor, PolynomialMember{
-					Exp:         m.Exp,
+					Exp:         b[0].Exp - k,
 					Coefficient: c,
 					IsX:         true,
 				})
@@ -421,16 +431,25 @@ func getEcc(
 			continue
 		}
 
+		// fmt.Printf("\nto_xor IS: %+v\n", to_xor)
 		//Xor to_xor with b
-		for i, m := range b {
-			if i < len(to_xor) {
-				c := getCoefficientIfAlphaBig(m.Coefficient, to_xor[i].Coefficient, true)
-				m.Coefficient = c
+		for j := range to_xor {
+			if j < len(b) {
+				c := getCoefficientIfAlphaBig(b[j].Coefficient, to_xor[j].Coefficient, true)
+				b[j].Coefficient = c
+				continue
 			}
+
+			b = append(b, PolynomialMember{
+				Exp:         to_xor[j].Exp,
+				Coefficient: to_xor[j].Coefficient,
+				IsX:         to_xor[j].IsX,
+			})
 		}
+
 		//Remove lead
 		b = append(b[:0], b[1:]...)
-
+		to_xor = nil
 	}
 
 	return b
@@ -467,4 +486,5 @@ func main() {
 	}
 
 	fmt.Printf("\nECC POLYNOMIAL IS %+v\n", getEcc(msg_p, gen_p))
+
 }
