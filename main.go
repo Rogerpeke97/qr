@@ -453,6 +453,33 @@ func getEcc(
 	return b
 }
 
+func addSeparators(
+	img *image.RGBA,
+) {
+	var sp_start_points = [][]int{{0, 7}, {0, HEIGHT - 8}}
+
+	for x := 0; x < WIDTH; x++ {
+		for y := 0; y < HEIGHT; y++ {
+			has_to_paint := false
+			for _, sp := range sp_start_points {
+				if x >= sp[0] && x < sp[0]+8 {
+					if (y >= sp[1] && y < sp[1]+1) || (x == 7 && (y < 8 || y > HEIGHT-8)) {
+						has_to_paint = true
+					}
+				}
+			}
+
+			if has_to_paint {
+				img.Set(x, y, color.White)
+				//the opposite of the first sp
+				if y < 8 {
+					img.Set(WIDTH-(x+1), y, color.White)
+				}
+			}
+		}
+	}
+}
+
 func addFinderPatters(
 	img *image.RGBA,
 ) {
@@ -496,6 +523,7 @@ func genQrImage() {
 	low_right := image.Point{WIDTH, HEIGHT}
 	img := image.NewRGBA(image.Rectangle{up_left, low_right})
 	addFinderPatters(img)
+	addSeparators(img)
 
 	f, _ := os.Create("image.png")
 	png.Encode(f, img)
