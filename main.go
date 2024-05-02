@@ -515,7 +515,26 @@ func main() {
 		}
 	}
 
-	fmt.Printf("\nECC POLYNOMIAL IS %+v\n", getEcc(msg_p, gen_p))
+	ecc := getEcc(msg_p, gen_p)
+	var final_bin string
+	for _, m := range ecc {
+		bin := strconv.FormatInt(int64(m.Coefficient), 2)
+		if len(bin) < 8 {
+			var pad string
+			for i := 0; i < 8-len(bin); i++ {
+				pad += "0"
+			}
+
+			final_bin += pad + bin
+			continue
+		}
+
+		final_bin += bin
+	}
+	//Remainder bits for ver 4 are 7
+	final_bin += "0000000"
+	fmt.Printf("\nECC POLYNOMIAL IS %+v\n", ecc)
+	fmt.Printf("\nFINAL MESSAGE: %s\n", final_bin)
 
 	genQrImage()
 }
