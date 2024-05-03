@@ -34,6 +34,7 @@ var HEIGHT = 33
 var FINDER_PATTERN_W_H = 7
 var SEPARATOR_W_H = FINDER_PATTERN_W_H + 1
 var ALIGNMENT_PATTERN_W_H = 5
+var VERSION = 4
 
 // x and degree
 func findMultiplierOfHighestDegree(
@@ -591,6 +592,45 @@ func addTimingPatterns(
 	}
 }
 
+func addDarkModuleAndReservedSpaces(
+	coordinates *[]QrCoordinate,
+	x int,
+	y int,
+) {
+	dark_module_coordinate := []int{(VERSION * 4) + 9, 8}
+	if x == dark_module_coordinate[0] && y == dark_module_coordinate[1] {
+		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "black"})
+	}
+
+	var rs_range = [][]int{{0, 0}, {SEPARATOR_W_H, SEPARATOR_W_H}}
+	has_to_paint := false
+
+	if x >= rs_range[0][0] && x <= rs_range[1][0] {
+		if x < rs_range[1][0] {
+			if y == rs_range[1][1] {
+				has_to_paint = true
+			}
+		} else {
+			if y <= rs_range[1][1] {
+				has_to_paint = true
+			}
+		}
+	}
+
+	if has_to_paint {
+		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "blue"})
+		//the opposite of the first sp
+
+		if y == rs_range[1][1] && WIDTH-x < WIDTH {
+			*coordinates = append(*coordinates, QrCoordinate{X: WIDTH - x, Y: y, Color: "blue"})
+		}
+		if x == rs_range[1][0] && y <= rs_range[1][1] && HEIGHT-y < HEIGHT {
+			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: HEIGHT - y, Color: "blue"})
+		}
+	}
+
+}
+
 func addPatterns(
 	coordinates *[]QrCoordinate,
 ) {
@@ -600,6 +640,7 @@ func addPatterns(
 			addSeparators(coordinates, x, y)
 			addAlignmentPatterns(coordinates, x, y)
 			addTimingPatterns(coordinates, x, y)
+			addDarkModuleAndReservedSpaces(coordinates, x, y)
 		}
 	}
 }
