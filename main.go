@@ -1,13 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"image"
-	"image/color"
-	"image/png"
+	"log"
 	"math"
-	"os"
-	"os/exec"
+	"net/http"
 	"strconv"
 )
 
@@ -15,6 +13,12 @@ type PolynomialMember struct {
 	Exp         int
 	Coefficient int
 	IsX         bool
+}
+
+type QrCoordinate struct {
+	X     int    `json:"x"`
+	Y     int    `json:"y"`
+	Color string `json:"color"`
 }
 
 var power_of_code = byte('^')
@@ -455,7 +459,7 @@ func getEcc(
 }
 
 func addAlignmentPatterns(
-	img *image.RGBA,
+	coordinates *[]QrCoordinate,
 	x int,
 	y int,
 ) {
@@ -465,23 +469,23 @@ func addAlignmentPatterns(
 	if x >= row_col[0] && x < row_col[0]+5 {
 		if y >= row_col[1] && y < row_col[1]+5 {
 			if x == row_col[0]+2 && y == row_col[1]+2 {
-				img.Set(x, y, color.Black)
+				*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "black"})
 				return
 			}
 
 			if x >= row_col[0]+1 && x < row_col[0]+4 && y >= row_col[1]+1 && y < row_col[1]+4 {
-				img.Set(x, y, color.White)
+				*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "white"})
 				return
 			}
 
-			img.Set(x, y, color.Black)
+			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "black"})
 		}
 	}
 
 }
 
 func addSeparators(
-	img *image.RGBA,
+	coordinates *[]QrCoordinate,
 	x int,
 	y int,
 ) {
@@ -497,20 +501,20 @@ func addSeparators(
 	}
 
 	if has_to_paint {
-		img.Set(x, y, color.White)
+		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "white"})
 		//the opposite of the first sp
 		if y < 8 {
-			img.Set(WIDTH-(x+1), y, color.White)
+			*coordinates = append(*coordinates, QrCoordinate{X: WIDTH - (x + 1), Y: y, Color: "white"})
 		}
 	}
 }
 
 func addFinderPatterns(
-	img *image.RGBA,
+	coordinates *[]QrCoordinate,
 	x int,
 	y int,
 ) {
-	var curr_fp_color color.Color
+	var curr_fp_color string
 	var fp_start_points = [][]int{{0, 0}, {0, HEIGHT - 7}, {WIDTH - 7, 0}}
 
 	has_to_paint := false
@@ -528,39 +532,37 @@ func addFinderPatterns(
 		reduced_x := x - to_reduce[0]
 		reduced_y := y - to_reduce[1]
 		if reduced_y%6 == 0 {
-			curr_fp_color = color.Black
+			curr_fp_color = "black"
 		} else {
 			is_inner_square := reduced_x > 1 && reduced_x < 5 && reduced_y > 1 && reduced_y < 5
 			if reduced_x%6 == 0 || is_inner_square {
-				curr_fp_color = color.Black
+				curr_fp_color = "black"
 			} else {
-				curr_fp_color = color.White
+				curr_fp_color = "white"
 			}
 		}
-		img.Set(x, y, curr_fp_color)
+
+		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: curr_fp_color})
 	}
 }
 
 func addPatterns(
-	img *image.RGBA,
+	coordinates *[]QrCoordinate,
 ) {
 	for x := 0; x < WIDTH; x++ {
 		for y := 0; y < HEIGHT; y++ {
-			addFinderPatterns(img, x, y)
-			addSeparators(img, x, y)
-			addAlignmentPatterns(img, x, y)
+			addFinderPatterns(coordinates, x, y)
+			addSeparators(coordinates, x, y)
+			addAlignmentPatterns(coordinates, x, y)
 		}
 	}
 }
 
-func genQrImage() {
-	up_left := image.Point{0, 0}
-	low_right := image.Point{WIDTH, HEIGHT}
-	img := image.NewRGBA(image.Rectangle{up_left, low_right})
-	addPatterns(img)
+func genQrImageCoordinates() []QrCoordinate {
+	var coordinates []QrCoordinate
+	addPatterns(&coordinates)
 
-	f, _ := os.Create("image.png")
-	png.Encode(f, img)
+	return coordinates
 }
 
 func main() {
@@ -616,12 +618,22 @@ func main() {
 	fmt.Printf("\nECC POLYNOMIAL IS %+v\n", ecc)
 	fmt.Printf("\nFINAL MESSAGE: %s\n", final_bin)
 
-	genQrImage()
-	cmd := "eog image.png"
-	_, err := exec.Command("sh", "-c", cmd).CombinedOutput()
-	if err != nil {
-		fmt.Println(err)
-		panic("Could not open image :(")
-	}
+	coordinates := genQrImageCoordinates()
 
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "index.html")
+	})
+
+	http.HandleFunc("/coordinates", func(w http.ResponseWriter, r *http.Request) {
+		json_coordinates, err := json.Marshal(coordinates)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(json_coordinates)
+	})
+
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
