@@ -31,6 +31,9 @@ var ascii_integer_min_max = []int{48, 57}
 var BYTE_MODE_INDICATOR = "0100"
 var WIDTH = 33
 var HEIGHT = 33
+var FINDER_PATTERN_W_H = 7
+var SEPARATOR_W_H = FINDER_PATTERN_W_H + 1
+var ALIGNMENT_PATTERN_W_H = 5
 
 // x and degree
 func findMultiplierOfHighestDegree(
@@ -468,8 +471,8 @@ func addAlignmentPatterns(
 	//ROW AND COL FOR VER 4 (6, 26)
 	row_col := []int{26 - 2, 26 - 2}
 
-	if x >= row_col[0] && x < row_col[0]+5 {
-		if y >= row_col[1] && y < row_col[1]+5 {
+	if x >= row_col[0] && x < row_col[0]+ALIGNMENT_PATTERN_W_H {
+		if y >= row_col[1] && y < row_col[1]+ALIGNMENT_PATTERN_W_H {
 			if x == row_col[0]+2 && y == row_col[1]+2 {
 				*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "black"})
 				return
@@ -491,12 +494,12 @@ func addSeparators(
 	x int,
 	y int,
 ) {
-	var sp_start_points = [][]int{{0, 7}, {0, HEIGHT - 8}}
+	var sp_start_points = [][]int{{0, SEPARATOR_W_H - 1}, {0, HEIGHT - SEPARATOR_W_H}}
 
 	has_to_paint := false
 	for _, sp := range sp_start_points {
-		if x >= sp[0] && x < sp[0]+8 {
-			if (y >= sp[1] && y < sp[1]+1) || (x == 7 && (y < 8 || y > HEIGHT-8)) {
+		if x >= sp[0] && x < sp[0]+SEPARATOR_W_H {
+			if (y >= sp[1] && y < sp[1]+1) || (x == SEPARATOR_W_H-1 && (y < SEPARATOR_W_H || y > HEIGHT-SEPARATOR_W_H)) {
 				has_to_paint = true
 			}
 		}
@@ -505,7 +508,7 @@ func addSeparators(
 	if has_to_paint {
 		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "white"})
 		//the opposite of the first sp
-		if y < 8 {
+		if y < SEPARATOR_W_H {
 			*coordinates = append(*coordinates, QrCoordinate{X: WIDTH - (x + 1), Y: y, Color: "white"})
 		}
 	}
@@ -517,13 +520,13 @@ func addFinderPatterns(
 	y int,
 ) {
 	var curr_fp_color string
-	var fp_start_points = [][]int{{0, 0}, {0, HEIGHT - 7}, {WIDTH - 7, 0}}
+	var fp_start_points = [][]int{{0, 0}, {0, HEIGHT - FINDER_PATTERN_W_H}, {WIDTH - FINDER_PATTERN_W_H, 0}}
 
 	has_to_paint := false
 	to_reduce := []int{0, 0}
 	for _, fp := range fp_start_points {
-		if x >= fp[0] && x < fp[0]+7 {
-			if y >= fp[1] && y < fp[1]+7 {
+		if x >= fp[0] && x < fp[0]+FINDER_PATTERN_W_H {
+			if y >= fp[1] && y < fp[1]+FINDER_PATTERN_W_H {
 				has_to_paint = true
 				to_reduce[0] = fp[0]
 				to_reduce[1] = fp[1]
@@ -548,6 +551,46 @@ func addFinderPatterns(
 	}
 }
 
+func addTimingPatterns(
+	coordinates *[]QrCoordinate,
+	x int,
+	y int,
+) {
+	left_strip_y_range := []int{SEPARATOR_W_H, HEIGHT - SEPARATOR_W_H}
+	left_strip_x_range := []int{SEPARATOR_W_H - 2, SEPARATOR_W_H - 1}
+
+	top_strip_x_range := []int{SEPARATOR_W_H, HEIGHT - SEPARATOR_W_H}
+	top_strip_y_range := []int{SEPARATOR_W_H - 2, SEPARATOR_W_H - 1}
+
+	relative_y_left_idx := y - left_strip_y_range[0]
+	relative_x_top_idx := x - top_strip_x_range[0]
+	if x >= left_strip_x_range[0] && x < left_strip_x_range[1] {
+		if y >= left_strip_y_range[0] && y < left_strip_y_range[1] {
+			var curr_s_color string
+			if relative_y_left_idx%2 == 0 {
+				curr_s_color = "black"
+			} else {
+				curr_s_color = "white"
+			}
+
+			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: curr_s_color})
+		}
+	}
+
+	if x >= top_strip_x_range[0] && x < top_strip_x_range[1] {
+		if y >= top_strip_y_range[0] && y < top_strip_y_range[1] {
+			var curr_s_color string
+			if relative_x_top_idx%2 == 0 {
+				curr_s_color = "black"
+			} else {
+				curr_s_color = "white"
+			}
+
+			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: curr_s_color})
+		}
+	}
+}
+
 func addPatterns(
 	coordinates *[]QrCoordinate,
 ) {
@@ -556,6 +599,7 @@ func addPatterns(
 			addFinderPatterns(coordinates, x, y)
 			addSeparators(coordinates, x, y)
 			addAlignmentPatterns(coordinates, x, y)
+			addTimingPatterns(coordinates, x, y)
 		}
 	}
 }
