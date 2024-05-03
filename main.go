@@ -18,9 +18,10 @@ type PolynomialMember struct {
 }
 
 type QrCoordinate struct {
-	X     int    `json:"x"`
-	Y     int    `json:"y"`
-	Color string `json:"color"`
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
+	Color    string `json:"color"`
+	Reserved bool   `json:"reserved"`
 }
 
 var power_of_code = byte('^')
@@ -507,10 +508,10 @@ func addSeparators(
 	}
 
 	if has_to_paint {
-		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "white"})
+		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "white", Reserved: true})
 		//the opposite of the first sp
 		if y < SEPARATOR_W_H {
-			*coordinates = append(*coordinates, QrCoordinate{X: WIDTH - (x + 1), Y: y, Color: "white"})
+			*coordinates = append(*coordinates, QrCoordinate{X: WIDTH - (x + 1), Y: y, Color: "white", Reserved: true})
 		}
 	}
 }
@@ -548,7 +549,7 @@ func addFinderPatterns(
 			}
 		}
 
-		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: curr_fp_color})
+		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: curr_fp_color, Reserved: true})
 	}
 }
 
@@ -574,7 +575,7 @@ func addTimingPatterns(
 				curr_s_color = "white"
 			}
 
-			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: curr_s_color})
+			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: curr_s_color, Reserved: true})
 		}
 	}
 
@@ -587,7 +588,7 @@ func addTimingPatterns(
 				curr_s_color = "white"
 			}
 
-			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: curr_s_color})
+			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: curr_s_color, Reserved: true})
 		}
 	}
 }
@@ -599,7 +600,7 @@ func addDarkModuleAndReservedSpaces(
 ) {
 	dark_module_coordinate := []int{(VERSION * 4) + 9, 8}
 	if x == dark_module_coordinate[0] && y == dark_module_coordinate[1] {
-		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "black"})
+		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "black", Reserved: true})
 	}
 
 	var rs_range = [][]int{{0, 0}, {SEPARATOR_W_H, SEPARATOR_W_H}}
@@ -618,14 +619,14 @@ func addDarkModuleAndReservedSpaces(
 	}
 
 	if has_to_paint {
-		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "blue"})
+		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "blue", Reserved: true})
 		//the opposite of the first sp
 
 		if y == rs_range[1][1] && WIDTH-x < WIDTH {
-			*coordinates = append(*coordinates, QrCoordinate{X: WIDTH - x, Y: y, Color: "blue"})
+			*coordinates = append(*coordinates, QrCoordinate{X: WIDTH - x, Y: y, Color: "blue", Reserved: true})
 		}
 		if x == rs_range[1][0] && y <= rs_range[1][1] && HEIGHT-y < HEIGHT {
-			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: HEIGHT - y, Color: "blue"})
+			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: HEIGHT - y, Color: "blue", Reserved: true})
 		}
 	}
 
