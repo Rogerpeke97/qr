@@ -635,10 +635,81 @@ func addDarkModuleAndReservedSpaces(
 func addDataBits(
 	data string,
 	coordinates *[]QrCoordinate,
-	x int,
-	y int,
 ) {
+	direction := "up"
+	y_start_idx := (HEIGHT - 1) * -1
+	y_less_than := 1
+	var can_paint_at_x []int
+	var data_color string
+	no_more_data := false
 
+	for x := WIDTH - 1; x >= 0; x -= 2 {
+		if no_more_data {
+			break
+		}
+
+		for y := y_start_idx; y < y_less_than; y++ {
+			if len(data) == 0 {
+				no_more_data = true
+				break
+			}
+
+			can_paint_at_x = []int{x, x + 1}
+			y_abs := y
+			if y < 0 {
+				y_abs = y * -1
+			}
+
+			for _, coord := range *coordinates {
+				if y_abs == coord.Y {
+					if can_paint_at_x[0] == coord.X {
+						can_paint_at_x[0] = -1
+					}
+					if can_paint_at_x[1] == coord.X {
+						can_paint_at_x[1] = -1
+					}
+
+				}
+			}
+
+			if can_paint_at_x[0] != -1 {
+				// fmt.Printf("ADDING DATA. y is: %d, y_start_idx: %d, y_less_than: %d\n", y, y_start_idx, y_less_than)
+				//ascii 48 == 0 and 49 == 1
+				if data[0] == 48 {
+					data_color = "white"
+				} else {
+					data_color = "black"
+				}
+
+				*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y_abs, Color: data_color})
+				data = data[1:]
+			}
+
+			if can_paint_at_x[1] != -1 {
+				if can_paint_at_x[1] >= 0 && len(data) >= 1 {
+					if data[0] == 48 {
+						data_color = "white"
+					} else {
+						data_color = "black"
+					}
+
+					*coordinates = append(*coordinates, QrCoordinate{X: x + 1, Y: y_abs, Color: data_color})
+					data = data[1:]
+				}
+			}
+
+		}
+
+		if direction == "up" {
+			direction = "down"
+			y_start_idx = 0
+			y_less_than = HEIGHT
+		} else {
+			direction = "up"
+			y_start_idx = (HEIGHT - 1) * -1
+			y_less_than = 1
+		}
+	}
 }
 
 func addPatterns(
@@ -726,6 +797,8 @@ func main() {
 	fmt.Printf("\nFINAL MESSAGE: %s\n", final_bin)
 
 	coordinates := genQrImageCoordinates()
+	addDataBits(final_bin, &coordinates)
+
 	url := "http://localhost:8080"
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
