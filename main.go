@@ -6,6 +6,8 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os/exec"
+	"runtime"
 	"strconv"
 )
 
@@ -619,6 +621,7 @@ func main() {
 	fmt.Printf("\nFINAL MESSAGE: %s\n", final_bin)
 
 	coordinates := genQrImageCoordinates()
+	url := "http://localhost:8080"
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "index.html")
@@ -635,5 +638,20 @@ func main() {
 		w.Write(json_coordinates)
 	})
 
+	var err error
+	switch runtime.GOOS {
+	case "linux":
+		err = exec.Command("xdg-open", url).Start()
+	case "darwin":
+		err = exec.Command("open", url).Start()
+	default:
+		err = fmt.Errorf("unsupported platform")
+	}
+	if err != nil {
+		fmt.Printf("Error opening URL: %v", err)
+		return
+	}
+
+	fmt.Println("Opening URL:", url)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
