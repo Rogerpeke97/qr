@@ -632,6 +632,15 @@ func addDarkModuleAndReservedSpaces(
 
 }
 
+func addDataBits(
+	data string,
+	coordinates *[]QrCoordinate,
+	x int,
+	y int,
+) {
+
+}
+
 func addPatterns(
 	coordinates *[]QrCoordinate,
 ) {
@@ -651,6 +660,29 @@ func genQrImageCoordinates() []QrCoordinate {
 	addPatterns(&coordinates)
 
 	return coordinates
+}
+
+func fromPolynomialToBits(
+	polynomial *[]PolynomialMember,
+) string {
+	var bin string
+
+	for _, m := range *polynomial {
+		c_bin := strconv.FormatInt(int64(m.Coefficient), 2)
+		if len(c_bin) < 8 {
+			var pad string
+			for i := 0; i < 8-len(c_bin); i++ {
+				pad += "0"
+			}
+
+			bin += pad + c_bin
+			continue
+		}
+
+		bin += c_bin
+	}
+
+	return bin
 }
 
 func main() {
@@ -685,22 +717,9 @@ func main() {
 	}
 
 	ecc := getEcc(msg_p, gen_p)
-	var final_bin string
-	for _, m := range ecc {
-		bin := strconv.FormatInt(int64(m.Coefficient), 2)
-		if len(bin) < 8 {
-			var pad string
-			for i := 0; i < 8-len(bin); i++ {
-				pad += "0"
-			}
 
-			final_bin += pad + bin
-			continue
-		}
-
-		final_bin += bin
-	}
-
+	//add msg_p bits and ecc
+	final_bin := fromPolynomialToBits(&msg_p) + fromPolynomialToBits(&ecc)
 	//Remainder bits for ver 4 are 7
 	final_bin += "0000000"
 	fmt.Printf("\nECC POLYNOMIAL IS %+v\n", ecc)
