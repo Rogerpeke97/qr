@@ -5,17 +5,20 @@
 	<title>Canvas Example</title>
 </head>
 <body style="background-color: #202020">
-	<canvas id="myCanvas" width="1920" height="1080"></canvas>
+	<canvas 
+		id="myCanvas" 
+		width="1920" 
+		height="1080"
+		style="image-rendering: pixelated;image-rendering:crisp-edges"
+	>
+	</canvas>
 	<script>
-		var canvas = document.getElementById('myCanvas');
-		var ctx = canvas.getContext('2d');
+		var canvas = document.getElementById('myCanvas')
+		var ctx = canvas.getContext('2d')
 
 		async function renderQrCode() {
 			const response = await fetch("http://localhost:8080/coordinates")
-			console.log(response)
-
 			const coordinates = await response.json()
-			console.log(coordinates)
 
 			for (var i = 0; i < coordinates.length; i++) {
 				ctx.fillStyle = coordinates[i].color
