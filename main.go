@@ -777,20 +777,9 @@ func main() {
 	gen_p := genGeneratorPolynomial(ec_codewords_needed)
 	fmt.Printf("\nGen Polynomial is %+v\n", gen_p)
 
-	// Find if p exp is < codewords | genPolyMaxExp
-	if msg_p[0].Exp < ec_codewords_needed {
-		increase_msg_by_exp := ec_codewords_needed - msg_p[0].Exp
-		for i := range msg_p {
-			msg_p[i].Exp += increase_msg_by_exp
-		}
-
-	}
-
-	if gen_p[0].Exp < ec_codewords_needed {
-		increase_gen_by_exp := ec_codewords_needed - gen_p[0].Exp
-		for i := range gen_p {
-			gen_p[i].Exp += increase_gen_by_exp
-		}
+	// multiply msg polynomial by ec needed
+	for i := range msg_p {
+		msg_p[i].Exp += ec_codewords_needed
 	}
 
 	ecc := getEcc(msg_p, gen_p)
