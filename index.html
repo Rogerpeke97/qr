@@ -15,15 +15,28 @@
 	<script>
 		var canvas = document.getElementById('myCanvas')
 		var ctx = canvas.getContext('2d')
+		let coordinates
 
 		async function renderQrCode() {
 			const response = await fetch("http://localhost:8080/coordinates")
-			const coordinates = await response.json()
+			coordinates = await response.json()
 
 			for (var i = 0; i < coordinates.length; i++) {
+				if (!coordinates[i].reserved) {
+					continue
+				}
 				ctx.fillStyle = coordinates[i].color
 				ctx.fillRect(coordinates[i].x*10, coordinates[i].y*10, 10, 10)
 
+			}
+
+			for (var i = 0; i < coordinates.length; i++) {
+				if (coordinates[i].reserved) {
+					continue
+				}
+				ctx.fillStyle = coordinates[i].color
+				ctx.fillRect(coordinates[i].x*10, coordinates[i].y*10, 10, 10)
+				await new Promise(resolve => setTimeout(resolve, 10));
 			}
 		}
 

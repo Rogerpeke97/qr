@@ -266,3 +266,20 @@ func TestGenMessagePolynomial(t *testing.T) {
 	}
 
 }
+
+func TestEncode(t *testing.T) {
+	//Alphanumeric HELLO WORLD
+	encoded_msg := "0110000101101111000110100010111001011011100010011010100001101"
+	encoded_data_expect := "00100000010110110000101101111000110100010111001011011100010011010100001101000000111011000001000111101100"
+	encoded_data := encode(
+		encoded_msg,
+		11,
+		"0010",
+		9,
+		104,
+	)
+	if encoded_data != encoded_data_expect {
+		fmt.Printf("\nWrong value.\nGot: %s.\nExpected %s\n", encoded_data, encoded_data_expect)
+		t.Error("Fail!")
+	}
+}

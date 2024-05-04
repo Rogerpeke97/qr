@@ -33,6 +33,13 @@ var SEPARATOR_W_H = FINDER_PATTERN_W_H + 1
 var ALIGNMENT_PATTERN_W_H = 5
 var VERSION = 4
 
+// ver 4L in byte mode
+var MAX_CHAR_AMOUNT = 78
+
+// total data codewords
+var TOTAL_BITS_REQUIRED = 8 * 80
+var CHAR_COUNT_INDICATOR_BITS = 8
+
 func getAlphaVal(
 	exp int,
 ) int {
@@ -259,12 +266,7 @@ func divideIntoCodeWords(
 	// 8 bits. Total = 80
 	var codewords []string
 	for i := 8; i <= len(data); i += 8 {
-		var codeword string
-		for j := i - 8; j < i; j++ {
-			codeword += string(data[j])
-		}
-
-		codewords = append(codewords, codeword)
+		codewords = append(codewords, data[i-8:i])
 	}
 
 	return codewords
@@ -282,31 +284,61 @@ func divideIntoCodeWords(
 // data pad bytes 11101100 00010001 if not enough
 // returns mode, char_count_indicator, encoded_data, total_bits
 func encode(
-	str string,
-) (string, string, string, int) {
-	total_bits := 80 * 8
-	char_count_max_bit_long := 8
-	char_count := int64(len(str))
-	// Goes after mode indicator
-	char_count_bin := strconv.FormatInt(char_count, 2)
-	char_count_bin_len := len(char_count_bin)
-	if char_count_bin_len > char_count_max_bit_long {
-		fmt.Printf("\nMax bits for char count exceeded. Need %d, got %d\n", char_count_max_bit_long, len(char_count_bin))
-		panic("Failed!")
+	encoded_msg string,
+	decoded_msg_len int,
+	byte_mode_indicator string,
+	char_count_indicator_req_bits int,
+	total_bits_required int,
+
+) string {
+	var all_bits string
+	all_bits += byte_mode_indicator
+	data_bin_char_count := strconv.FormatInt(int64(decoded_msg_len), 2)
+	for len(data_bin_char_count) < char_count_indicator_req_bits {
+		data_bin_char_count = "0" + data_bin_char_count
 	}
 
-	if char_count_bin_len < char_count_max_bit_long {
-		padding := char_count_max_bit_long - char_count_bin_len
-		var pad_zeros string
-		for i := 0; i < padding; i++ {
-			pad_zeros += "0"
+	all_bits += data_bin_char_count
+	all_bits += encoded_msg
+
+	// add terminators
+	if len(all_bits) < total_bits_required {
+		for i := 0; i < 4; i++ {
+			if len(all_bits) < total_bits_required {
+				all_bits += "0"
+			}
 		}
-
-		char_count_bin = pad_zeros + char_count_bin
 	}
 
-	var data_bin_str string
-	encoded := []byte(str)
+	for len(all_bits)%8 != 0 {
+		all_bits += "0"
+	}
+
+	// if still too short add 236 and 17
+	if len(all_bits) < total_bits_required {
+		pad_bytes := []string{"11101100", "00010001"}
+		idx := 0
+
+		pad_bytes_to_add := (total_bits_required - len(all_bits)) / 8
+		for i := 0; i < pad_bytes_to_add; i++ {
+			all_bits += pad_bytes[idx]
+			if idx > 0 {
+				idx = 0
+				continue
+			}
+
+			idx = 1
+		}
+	}
+
+	return all_bits
+}
+
+func encodeMessage(
+	message string,
+) string {
+	var encoded_msg string
+	encoded := []byte(message)
 	for i := 0; i < len(encoded); i++ {
 		// assumes machine stores bin in little endian
 		for j := 7; j >= 0; j-- {
@@ -319,48 +351,11 @@ func encode(
 				bin_str_to_add = "0"
 			}
 
-			data_bin_str += bin_str_to_add
-		}
-	}
-	padding := total_bits - (len(data_bin_str) + len(BYTE_MODE_INDICATOR) + len(char_count_bin))
-
-	// add zero terminators first. Max of 4 zeros
-	if padding > 0 {
-		for i := 0; i < padding; i++ {
-			if i > 3 && (len(data_bin_str)+len(BYTE_MODE_INDICATOR)+len(char_count_bin))%8 == 0 {
-				break
-			}
-
-			data_bin_str += "0"
-		}
-
-		padding = total_bits - (len(data_bin_str) + len(BYTE_MODE_INDICATOR) + len(char_count_bin))
-	}
-
-	// if still too short add 236 and 17
-	if padding > 0 {
-		pad_bytes := []string{"11101100", "00010001"}
-		idx := 0
-
-		pad_bytes_to_add := padding / 8
-		for i := 0; i < pad_bytes_to_add; i++ {
-			data_bin_str += pad_bytes[idx]
-			if idx > 0 {
-				idx = 0
-				continue
-			}
-
-			idx = 1
+			encoded_msg += bin_str_to_add
 		}
 	}
 
-	encoded_data_total := len(BYTE_MODE_INDICATOR) + len(char_count_bin) + len(data_bin_str)
-	if encoded_data_total > total_bits {
-		fmt.Printf("\nTotal data codewords exceeds the permitted amount. Got %d, want %d\n", encoded_data_total, total_bits)
-		panic("Failed!")
-	}
-
-	return BYTE_MODE_INDICATOR, char_count_bin, data_bin_str, encoded_data_total
+	return encoded_msg
 }
 
 func getEcc(
@@ -420,16 +415,16 @@ func addAlignmentPatterns(
 	if x >= row_col[0] && x < row_col[0]+ALIGNMENT_PATTERN_W_H {
 		if y >= row_col[1] && y < row_col[1]+ALIGNMENT_PATTERN_W_H {
 			if x == row_col[0]+2 && y == row_col[1]+2 {
-				*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "black"})
+				*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "black", Reserved: true})
 				return
 			}
 
 			if x >= row_col[0]+1 && x < row_col[0]+4 && y >= row_col[1]+1 && y < row_col[1]+4 {
-				*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "white"})
+				*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "white", Reserved: true})
 				return
 			}
 
-			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "black"})
+			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "black", Reserved: true})
 		}
 	}
 
@@ -701,10 +696,17 @@ func fromPolynomialToBits(
 }
 
 func main() {
-	str := "HELLO WORLD"
-	mode, char_count_indicator, data, total_bits := encode(str)
-	fmt.Printf("\nMode is: %s\nChar count is: %s\nData is: %s\nTotal bits: %d\n", mode, char_count_indicator, data, total_bits)
-	codewords := divideIntoCodeWords(mode + char_count_indicator + data)
+	data := "HELLO WORLD!"
+	encoded_msg := encodeMessage(data)
+	encoded_data := encode(
+		encoded_msg,
+		len(data),
+		BYTE_MODE_INDICATOR,
+		CHAR_COUNT_INDICATOR_BITS,
+		TOTAL_BITS_REQUIRED,
+	)
+	fmt.Printf("\n\nTOTAL ENCODED DATA LEN IS: %d\n\n", len(encoded_data))
+	codewords := divideIntoCodeWords(encoded_data)
 	//4-L requires 20 EC codewords per block
 	ec_codewords_needed := 20
 	fmt.Printf("\nCodewords are: %+v\nAmount of codewords: %d\n", codewords, len(codewords))
@@ -727,7 +729,7 @@ func main() {
 	//Remainder bits for ver 4 are 7
 	final_bin += "0000000"
 	fmt.Printf("\nECC POLYNOMIAL IS %+v\n", ecc)
-	fmt.Printf("\nFINAL MESSAGE: %s\n", final_bin)
+	fmt.Printf("\nFINAL MESSAGE: %s\nLen of it: %d\n", final_bin, len(final_bin))
 
 	coordinates := genQrImageCoordinates()
 	addDataBits(final_bin, &coordinates)
