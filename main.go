@@ -24,10 +24,6 @@ type QrCoordinate struct {
 	Reserved bool   `json:"reserved"`
 }
 
-var power_of_code = byte('^')
-var x_code = byte('x')
-var ascii_integer_min_max = []int{48, 57}
-
 // Encoded data starts with the mode
 var BYTE_MODE_INDICATOR = "0100"
 var WIDTH = 33
@@ -36,64 +32,6 @@ var FINDER_PATTERN_W_H = 7
 var SEPARATOR_W_H = FINDER_PATTERN_W_H + 1
 var ALIGNMENT_PATTERN_W_H = 5
 var VERSION = 4
-
-// x and degree
-func findMultiplierOfHighestDegree(
-	f string,
-) (string, int) {
-	highest_degree_f := 0
-	highest_degree_f_x := ""
-	f_len := len(f)
-
-	for i := 0; i < f_len; i++ {
-		if f[i] == x_code {
-			if i+1 < f_len && f[i+1] == power_of_code && i+2 < f_len {
-				var deg_byte []byte
-				stop := false
-				idx_of_degree := i + 2
-				for !stop {
-					if idx_of_degree >= f_len {
-						stop = true
-						continue
-					}
-
-					not_an_integer := f[idx_of_degree] < byte(ascii_integer_min_max[0]) || f[idx_of_degree] > byte(ascii_integer_min_max[1])
-					if not_an_integer {
-						stop = true
-						continue
-					}
-
-					deg_byte = append(deg_byte, f[idx_of_degree])
-					idx_of_degree++
-				}
-				if len(deg_byte) == 0 {
-					fmt.Printf("\nInvalid character after power of at char %d of f: %s\n", i+2, f)
-					panic("Error parsing polynomial")
-				}
-
-				d, err := strconv.Atoi(string(deg_byte))
-				if err != nil {
-					fmt.Printf("\nInvalid character after power of at char %d of f: %s\n", i+2, f)
-					panic("Error parsing polynomial")
-				}
-
-				if d > highest_degree_f {
-					highest_degree_f = d
-					highest_degree_f_x = f[i:i+2] + string(deg_byte)
-					continue
-				}
-			}
-
-			if 1 > highest_degree_f {
-				highest_degree_f = 1
-				highest_degree_f_x = string(f[i])
-			}
-		}
-
-	}
-
-	return highest_degree_f_x, highest_degree_f
-}
 
 func getAlphaVal(
 	exp int,
