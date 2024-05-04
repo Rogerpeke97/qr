@@ -226,7 +226,15 @@ func genGeneratorPolynomial(
 				if is_x_mult {
 					exp = member.Exp + member2.Exp
 				} else {
-					exp = member.Exp
+					if member.IsX || member2.IsX {
+						if member.Exp > member2.Exp {
+							exp = member.Exp
+						} else {
+							exp = member2.Exp
+						}
+					} else {
+						exp = 0
+					}
 				}
 				c := getCoefficientIfAlphaBig(member.Coefficient, member2.Coefficient, false)
 
@@ -284,26 +292,24 @@ func genMessagePolynomial(
 			fmt.Printf("\nError, codeword %s failed with: %+v\n", codeword, err)
 			panic("FAIL!!")
 		}
-		if idx < codewords_len-1 {
-			var sign string
-			if idx > 0 {
-				sign = "+"
-			}
-			exp := (codewords_len - 1) - idx
-			polynomial_s += fmt.Sprintf("%s%dx^%d", sign, d, exp)
-			polynomial = append(polynomial, PolynomialMember{
-				Coefficient: int(d),
-				Exp:         exp,
-				IsX:         true,
-			})
-		} else {
-			polynomial_s += fmt.Sprintf("+%d", d)
-			polynomial = append(polynomial, PolynomialMember{
-				Coefficient: int(d),
-				Exp:         1,
-				IsX:         false,
-			})
+		var sign string
+		if idx > 0 {
+			sign = "+"
 		}
+		exp := (codewords_len - 1) - idx
+		polynomial_s += fmt.Sprintf("%s%dx^%d", sign, d, exp)
+		var is_x bool
+		if exp > 0 {
+			is_x = true
+		} else {
+			is_x = false
+		}
+
+		polynomial = append(polynomial, PolynomialMember{
+			Coefficient: int(d),
+			Exp:         exp,
+			IsX:         is_x,
+		})
 	}
 
 	return polynomial, polynomial_s
@@ -654,7 +660,7 @@ func addDataBits(
 				break
 			}
 
-			can_paint_at_x = []int{x, x + 1}
+			can_paint_at_x = []int{x, x - 1}
 			y_abs := y
 			if y < 0 {
 				y_abs = y * -1
@@ -693,7 +699,7 @@ func addDataBits(
 						data_color = "black"
 					}
 
-					*coordinates = append(*coordinates, QrCoordinate{X: x + 1, Y: y_abs, Color: data_color})
+					*coordinates = append(*coordinates, QrCoordinate{X: can_paint_at_x[1], Y: y_abs, Color: data_color})
 					data = data[1:]
 				}
 			}
