@@ -164,7 +164,6 @@ func genGeneratorPolynomial(
 					IsX:         false,
 				},
 			}
-			// fmt.Printf("\nAlpha VAL is: %d for m: %d\n", getAlphaVal(m), m)
 			m++
 		}
 
@@ -344,8 +343,9 @@ func encodeMessage(
 ) string {
 	var encoded_msg string
 	encoded := []byte(message)
+
 	for i := 0; i < len(encoded); i++ {
-		// assumes machine stores bin in little endian
+		// TODO: assumes machine stores bin in little endian. Automate it
 		for j := 7; j >= 0; j-- {
 			mask := byte(1 << uint(j))
 			bin := encoded[i] & mask
@@ -661,7 +661,6 @@ func addDataBits(
 			}
 
 			if can_paint_at_x[0] != -1 {
-				// fmt.Printf("ADDING DATA. y is: %d, y_start_idx: %d, y_less_than: %d\n", y, y_start_idx, y_less_than)
 				//ascii 48 == 0 and 49 == 1
 				if data[0] == 48 {
 					// Add mask number 3
@@ -850,13 +849,6 @@ func GenQrCode(
 ) (*[]QrCoordinate, int) {
 	pixels := determinePixelsFromVersion(version)
 	encoded_msg := encodeMessage(message)
-	// encoded_data := encode(
-	// 	encoded_msg,
-	// 	len(data),
-	// 	"0010",
-	// 	9,
-	// 	104,
-	// )
 	indicator_bits_len, indicator_bits := getCharCountIndicatorBitsLenAndModeIndicatorBits(indicator_mode)
 	encoded_data := encode(
 		encoded_msg,
@@ -866,7 +858,6 @@ func GenQrCode(
 		total_bits_required,
 	)
 
-	fmt.Printf("\nEncoded DATA IS: %+v\n", encoded_data)
 	codewords := divideIntoCodeWords(encoded_data)
 	msg_p, _ := genMessagePolynomial(codewords)
 	gen_p := genGeneratorPolynomial(ec_codewords_needed)
@@ -879,13 +870,8 @@ func GenQrCode(
 	msg_bits := fromPolynomialToBits(&msg_p)
 	ecc := getEcc(msg_p, gen_p)
 
-	fmt.Printf("\nMSG IN BITS: %s\n", msg_bits)
-	fmt.Printf("\nECC IN BITS: %s\n", fromPolynomialToBits(&ecc))
 	//add msg_p bits and ecc
 	final_bin := msg_bits + fromPolynomialToBits(&ecc)
-	//Remainder bits for ver 4 are 7
-	// final_bin += "0000000"
-	fmt.Printf("\nFINAL MESSAGE: %s\nLen of it: %d\n", final_bin, len(final_bin))
 
 	coordinates := genCoordinatesForStaticPatterns(
 		pixels,
