@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"net/http"
@@ -798,9 +799,7 @@ func addFormatAndVersionInfo(
 				(*coordinates)[add_bit_at_coords_idx].Color = "black"
 			}
 
-			fmt.Printf("\nHORIZONTAL BITS BEFORE: %s\n", horizontal_bits_to_add)
 			horizontal_bits_to_add = horizontal_bits_to_add[1:]
-			fmt.Printf("\nHORIZONTAL BITS AFTER: %s\n", horizontal_bits_to_add)
 		}
 	}
 
@@ -842,7 +841,7 @@ func getCharCountIndicatorBitsLenAndModeIndicatorBits(
 }
 
 // return coords and pixels
-func genQrCode(
+func GenQrCode(
 	message string,
 	version int,
 	indicator_mode string,
@@ -899,7 +898,7 @@ func genQrCode(
 }
 
 func main() {
-	coordinates, pixels := genQrCode(
+	coordinates, pixels := GenQrCode(
 		"MONDAY LEFT ME BROKEN",
 		VERSION,
 		"byte_mode",
@@ -914,9 +913,38 @@ func main() {
 	})
 
 	http.HandleFunc("/coordinates", func(w http.ResponseWriter, r *http.Request) {
+		var coords *[]QrCoordinate
+		var pxs int
+		if r.Method == http.MethodPost {
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			defer r.Body.Close()
+
+			var new_msg struct{ Message string }
+			err = json.Unmarshal(body, &new_msg)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+
+			coords, pxs = GenQrCode(
+				new_msg.Message,
+				VERSION,
+				"byte_mode",
+				TOTAL_BITS_REQUIRED,
+				EC_CODEWORDS_NEEDED,
+			)
+		} else {
+			coords = coordinates
+			pxs = pixels
+		}
+
 		json_coordinates, err := json.Marshal(map[string]interface{}{
-			"coordinates": coordinates,
-			"pixels":      pixels,
+			"coordinates": coords,
+			"pixels":      pxs,
 		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

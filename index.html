@@ -2,26 +2,24 @@
 <html>
 <head>
 	<meta charset="UTF-8">
-	<title>Canvas Example</title>
+	<title>QR Code Gen</title>
 </head>
 <body style="background-color: #202020">
+	<div>
+		<h3 style="color:white">Enter your qr message</h3>
+		<input id="message" type="text" maxlength="78" placeholder="Enter text (up to 78 characters)">
+		<button onclick="newCustomMessageAndRenderQrCode()">Submit</button>
+
+	</div>
 	<canvas 
 		id="myCanvas" 
-		style="image-rendering: pixelated;margin:50px;background-color:white"
+		style="image-rendering: pixelated;image-rendering:crisp-edges;margin-top:20px;background-color:white"
 	>
 	</canvas>
 	<script>
 		var canvas = document.getElementById('myCanvas')
 		var ctx = canvas.getContext('2d')
-
-		async function renderQrCode() {
-			const response = await fetch("http://localhost:8080/coordinates")
-			const { coordinates, pixels }= await response.json()
-			canvas.width = pixels * 10
-			canvas.height = pixels * 10
-			canvas.style.padding = `${4 * 10}px`
-			console.log("ass")
-
+		async function render(coordinates, pixels) {
 			for (var i = 0; i < coordinates.length; i++) {
 				if (!coordinates[i].reserved) {
 					continue
@@ -39,6 +37,34 @@
 				ctx.fillRect(coordinates[i].x*10, coordinates[i].y*10, 10, 10)
 				await new Promise(resolve => setTimeout(resolve, 10));
 			}
+		}
+
+		async function newCustomMessageAndRenderQrCode () {
+			const input = document.getElementById("message")
+			const response = await fetch("http://localhost:8080/coordinates", {
+				method: "POST",
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					message: input.value,
+				})
+			})
+			const { coordinates, pixels }= await response.json()
+			canvas.width = pixels * 10
+			canvas.height = pixels * 10
+			canvas.style.padding = `${4 * 10}px`
+			render(coordinates, pixels)
+		}
+
+		async function renderQrCode() {
+			const response = await fetch("http://localhost:8080/coordinates")
+			const { coordinates, pixels }= await response.json()
+			console.log("coords are", coordinates, "pixels", pixels)
+			canvas.width = pixels * 10
+			canvas.height = pixels * 10
+			canvas.style.padding = `${4 * 10}px`
+			render(coordinates, pixels)
 		}
 
 		renderQrCode()
