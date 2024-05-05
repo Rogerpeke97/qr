@@ -32,6 +32,7 @@ var FINDER_PATTERN_W_H = 7
 var SEPARATOR_W_H = FINDER_PATTERN_W_H + 1
 var ALIGNMENT_PATTERN_W_H = 5
 var VERSION = 4
+var VERTICAL_TIMING_PATTERN_X_COORD = SEPARATOR_W_H - 2
 
 // ver 4L in byte mode
 var MAX_CHAR_AMOUNT = 78
@@ -585,6 +586,10 @@ func addDataBits(
 	for x := WIDTH - 1; x >= 0; x -= 2 {
 		if no_more_data {
 			break
+		}
+
+		if x == VERTICAL_TIMING_PATTERN_X_COORD {
+			x--
 		}
 
 		for y := y_start_idx; y < y_less_than; y++ {
