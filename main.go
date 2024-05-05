@@ -899,7 +899,7 @@ func GenQrCode(
 
 func main() {
 	coordinates, pixels := GenQrCode(
-		"MONDAY LEFT ME BROKEN",
+		"https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 		VERSION,
 		"byte_mode",
 		TOTAL_BITS_REQUIRED,

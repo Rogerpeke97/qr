@@ -6,9 +6,16 @@
 </head>
 <body style="background-color: #202020">
 	<div>
-		<h3 style="color:white">Enter your qr message</h3>
+		<h3 style="color:white">Enter your QR message or URL</h3>
+		<p style="color:white">
+			This Qr code uses byte mode encoding, version 4, 0 level masking and EC level L.
+			<br>
+			More versions, EC levels, auto masking as well as encoding modes, might be added in the future if I'm still interested
+			in this :)
+
+		</p>
 		<input id="message" type="text" maxlength="78" placeholder="Enter text (up to 78 characters)">
-		<button onclick="newCustomMessageAndRenderQrCode()">Submit</button>
+		<button onclick="newCustomMessageAndRenderQrCode()">Generate!</button>
 
 	</div>
 	<canvas 
@@ -35,7 +42,7 @@
 				}
 				ctx.fillStyle = coordinates[i].color
 				ctx.fillRect(coordinates[i].x*10, coordinates[i].y*10, 10, 10)
-				await new Promise(resolve => setTimeout(resolve, 10));
+				await new Promise(resolve => setTimeout(resolve, 5));
 			}
 		}
 
@@ -60,7 +67,6 @@
 		async function renderQrCode() {
 			const response = await fetch("http://localhost:8080/coordinates")
 			const { coordinates, pixels }= await response.json()
-			console.log("coords are", coordinates, "pixels", pixels)
 			canvas.width = pixels * 10
 			canvas.height = pixels * 10
 			canvas.style.padding = `${4 * 10}px`
