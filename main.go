@@ -18,28 +18,31 @@ type PolynomialMember struct {
 }
 
 type QrCoordinate struct {
-	X        int    `json:"x"`
-	Y        int    `json:"y"`
-	Color    string `json:"color"`
-	Reserved bool   `json:"reserved"`
+	X               int    `json:"x"`
+	Y               int    `json:"y"`
+	Color           string `json:"color"`
+	Reserved        bool   `json:"reserved"`
+	IsTimingPattern bool   `json:"is_timing_pattern"`
+	IsDarkModule    bool   `json:"is_dark_module"`
 }
 
 // Encoded data starts with the mode
-var BYTE_MODE_INDICATOR = "0100"
-var WIDTH = 33
-var HEIGHT = 33
 var FINDER_PATTERN_W_H = 7
 var SEPARATOR_W_H = FINDER_PATTERN_W_H + 1
 var ALIGNMENT_PATTERN_W_H = 5
-var VERSION = 4
 var VERTICAL_TIMING_PATTERN_X_COORD = SEPARATOR_W_H - 2
+
+// TODO: CALCULATE IT RATHER THAN HARD CODE. IT'S EASY, JUST BORING
+// IM ADDING ONE MORE REPEATED BIT SINCE THE IDX 7th REPEATS IN THE RESERVED SPACES
+var FORMAT_AND_VERSION_INFO = "1110111111000100"
 
 // ver 4L in byte mode
 var MAX_CHAR_AMOUNT = 78
+var VERSION = 4
 
 // total data codewords
 var TOTAL_BITS_REQUIRED = 8 * 80
-var CHAR_COUNT_INDICATOR_BITS = 8
+var EC_CODEWORDS_NEEDED = 20
 
 func getAlphaVal(
 	exp int,
@@ -435,13 +438,15 @@ func addSeparators(
 	coordinates *[]QrCoordinate,
 	x int,
 	y int,
+	width int,
+	height int,
 ) {
-	var sp_start_points = [][]int{{0, SEPARATOR_W_H - 1}, {0, HEIGHT - SEPARATOR_W_H}}
+	var sp_start_points = [][]int{{0, SEPARATOR_W_H - 1}, {0, height - SEPARATOR_W_H}}
 
 	has_to_paint := false
 	for _, sp := range sp_start_points {
 		if x >= sp[0] && x < sp[0]+SEPARATOR_W_H {
-			if (y >= sp[1] && y < sp[1]+1) || (x == SEPARATOR_W_H-1 && (y < SEPARATOR_W_H || y > HEIGHT-SEPARATOR_W_H)) {
+			if (y >= sp[1] && y < sp[1]+1) || (x == SEPARATOR_W_H-1 && (y < SEPARATOR_W_H || y > height-SEPARATOR_W_H)) {
 				has_to_paint = true
 			}
 		}
@@ -451,7 +456,7 @@ func addSeparators(
 		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "white", Reserved: true})
 		//the opposite of the first sp
 		if y < SEPARATOR_W_H {
-			*coordinates = append(*coordinates, QrCoordinate{X: WIDTH - (x + 1), Y: y, Color: "white", Reserved: true})
+			*coordinates = append(*coordinates, QrCoordinate{X: width - (x + 1), Y: y, Color: "white", Reserved: true})
 		}
 	}
 }
@@ -460,9 +465,11 @@ func addFinderPatterns(
 	coordinates *[]QrCoordinate,
 	x int,
 	y int,
+	width int,
+	height int,
 ) {
 	var curr_fp_color string
-	var fp_start_points = [][]int{{0, 0}, {0, HEIGHT - FINDER_PATTERN_W_H}, {WIDTH - FINDER_PATTERN_W_H, 0}}
+	var fp_start_points = [][]int{{0, 0}, {0, height - FINDER_PATTERN_W_H}, {width - FINDER_PATTERN_W_H, 0}}
 
 	has_to_paint := false
 	to_reduce := []int{0, 0}
@@ -493,15 +500,28 @@ func addFinderPatterns(
 	}
 }
 
+func determinePixelsFromVersion(
+	version int,
+) int {
+	px := 17
+	for i := 0; i < version; i++ {
+		px += 4
+	}
+
+	return px
+}
+
 func addTimingPatterns(
 	coordinates *[]QrCoordinate,
 	x int,
 	y int,
+	width int,
+	height int,
 ) {
-	left_strip_y_range := []int{SEPARATOR_W_H, HEIGHT - SEPARATOR_W_H}
+	left_strip_y_range := []int{SEPARATOR_W_H, width - SEPARATOR_W_H}
 	left_strip_x_range := []int{SEPARATOR_W_H - 2, SEPARATOR_W_H - 1}
 
-	top_strip_x_range := []int{SEPARATOR_W_H, HEIGHT - SEPARATOR_W_H}
+	top_strip_x_range := []int{SEPARATOR_W_H, height - SEPARATOR_W_H}
 	top_strip_y_range := []int{SEPARATOR_W_H - 2, SEPARATOR_W_H - 1}
 
 	relative_y_left_idx := y - left_strip_y_range[0]
@@ -515,7 +535,13 @@ func addTimingPatterns(
 				curr_s_color = "white"
 			}
 
-			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: curr_s_color, Reserved: true})
+			*coordinates = append(*coordinates, QrCoordinate{
+				X:               x,
+				Y:               y,
+				Color:           curr_s_color,
+				Reserved:        true,
+				IsTimingPattern: true,
+			})
 		}
 	}
 
@@ -528,7 +554,13 @@ func addTimingPatterns(
 				curr_s_color = "white"
 			}
 
-			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: curr_s_color, Reserved: true})
+			*coordinates = append(*coordinates, QrCoordinate{
+				X:               x,
+				Y:               y,
+				Color:           curr_s_color,
+				Reserved:        true,
+				IsTimingPattern: true,
+			})
 		}
 	}
 }
@@ -537,10 +569,18 @@ func addDarkModuleAndReservedSpaces(
 	coordinates *[]QrCoordinate,
 	x int,
 	y int,
+	width int,
+	height int,
 ) {
 	dark_module_coordinate := []int{(VERSION * 4) + 9, 8}
 	if x == dark_module_coordinate[0] && y == dark_module_coordinate[1] {
-		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "black", Reserved: true})
+		*coordinates = append(*coordinates, QrCoordinate{
+			X:            x,
+			Y:            y,
+			Color:        "black",
+			Reserved:     true,
+			IsDarkModule: true,
+		})
 	}
 
 	var rs_range = [][]int{{0, 0}, {SEPARATOR_W_H, SEPARATOR_W_H}}
@@ -562,11 +602,11 @@ func addDarkModuleAndReservedSpaces(
 		*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y, Color: "blue", Reserved: true})
 		//the opposite of the first sp
 
-		if y == rs_range[1][1] && WIDTH-x < WIDTH {
-			*coordinates = append(*coordinates, QrCoordinate{X: WIDTH - x, Y: y, Color: "blue", Reserved: true})
+		if y == rs_range[1][1] && width-x < width {
+			*coordinates = append(*coordinates, QrCoordinate{X: width - x, Y: y, Color: "blue", Reserved: true})
 		}
-		if x == rs_range[1][0] && y <= rs_range[1][1] && HEIGHT-y < HEIGHT {
-			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: HEIGHT - y, Color: "blue", Reserved: true})
+		if x == rs_range[1][0] && y <= rs_range[1][1] && height-y < height {
+			*coordinates = append(*coordinates, QrCoordinate{X: x, Y: height - y, Color: "blue", Reserved: true})
 		}
 	}
 
@@ -575,15 +615,18 @@ func addDarkModuleAndReservedSpaces(
 func addDataBits(
 	data string,
 	coordinates *[]QrCoordinate,
+	width int,
+	height int,
 ) {
+	// TODO: EVALUATE THE MASK NUMBER WITH THE PENALTY SCORES
 	direction := "up"
-	y_start_idx := (HEIGHT - 1) * -1
+	y_start_idx := (height - 1) * -1
 	y_less_than := 1
 	var can_paint_at_x []int
 	var data_color string
 	no_more_data := false
 
-	for x := WIDTH - 1; x >= 0; x -= 2 {
+	for x := width - 1; x >= 0; x -= 2 {
 		if no_more_data {
 			break
 		}
@@ -620,9 +663,19 @@ func addDataBits(
 				// fmt.Printf("ADDING DATA. y is: %d, y_start_idx: %d, y_less_than: %d\n", y, y_start_idx, y_less_than)
 				//ascii 48 == 0 and 49 == 1
 				if data[0] == 48 {
-					data_color = "white"
+					// Add mask number 3
+					// (row + column) mod 3 == 0 => flip bit
+					if (can_paint_at_x[0]+y)%2 == 0 {
+						data_color = "black"
+					} else {
+						data_color = "white"
+					}
 				} else {
-					data_color = "black"
+					if (can_paint_at_x[0]+y)%2 == 0 {
+						data_color = "white"
+					} else {
+						data_color = "black"
+					}
 				}
 
 				*coordinates = append(*coordinates, QrCoordinate{X: x, Y: y_abs, Color: data_color})
@@ -632,9 +685,18 @@ func addDataBits(
 			if can_paint_at_x[1] != -1 {
 				if can_paint_at_x[1] >= 0 && len(data) >= 1 {
 					if data[0] == 48 {
-						data_color = "white"
+						if (can_paint_at_x[1]+y)%2 == 0 {
+							data_color = "black"
+						} else {
+							data_color = "white"
+						}
 					} else {
-						data_color = "black"
+
+						if (can_paint_at_x[1]+y)%2 == 0 {
+							data_color = "white"
+						} else {
+							data_color = "black"
+						}
 					}
 
 					*coordinates = append(*coordinates, QrCoordinate{X: can_paint_at_x[1], Y: y_abs, Color: data_color})
@@ -647,10 +709,10 @@ func addDataBits(
 		if direction == "up" {
 			direction = "down"
 			y_start_idx = 0
-			y_less_than = HEIGHT
+			y_less_than = height
 		} else {
 			direction = "up"
-			y_start_idx = (HEIGHT - 1) * -1
+			y_start_idx = (height - 1) * -1
 			y_less_than = 1
 		}
 	}
@@ -658,21 +720,26 @@ func addDataBits(
 
 func addPatterns(
 	coordinates *[]QrCoordinate,
+	width int,
+	height int,
 ) {
-	for x := 0; x < WIDTH; x++ {
-		for y := 0; y < HEIGHT; y++ {
-			addFinderPatterns(coordinates, x, y)
-			addSeparators(coordinates, x, y)
+	for x := 0; x < width; x++ {
+		for y := 0; y < height; y++ {
+			addFinderPatterns(coordinates, x, y, width, height)
+			addSeparators(coordinates, x, y, width, height)
 			addAlignmentPatterns(coordinates, x, y)
-			addTimingPatterns(coordinates, x, y)
-			addDarkModuleAndReservedSpaces(coordinates, x, y)
+			addDarkModuleAndReservedSpaces(coordinates, x, y, width, height)
+			addTimingPatterns(coordinates, x, y, width, height)
 		}
 	}
 }
 
-func genQrImageCoordinates() []QrCoordinate {
+func genCoordinatesForStaticPatterns(
+	width int,
+	height int,
+) []QrCoordinate {
 	var coordinates []QrCoordinate
-	addPatterns(&coordinates)
+	addPatterns(&coordinates, width, height)
 
 	return coordinates
 }
@@ -700,44 +767,145 @@ func fromPolynomialToBits(
 	return bin
 }
 
-func main() {
-	data := "HELLO WORLD!"
-	encoded_msg := encodeMessage(data)
+func addFormatAndVersionInfo(
+	coordinates *[]QrCoordinate,
+	width int,
+	height int,
+) {
+	horizontal_reserved_space_y := SEPARATOR_W_H
+	vertical_reserved_space_x := SEPARATOR_W_H
+	horizontal_bits_to_add := FORMAT_AND_VERSION_INFO
+	vertical_bits_to_add := FORMAT_AND_VERSION_INFO
+
+	for x := 0; x < width; x++ {
+		add_bit_at_coords_idx := -1
+		for i, c := range *coordinates {
+			if c.X == x && c.Y == horizontal_reserved_space_y {
+				if c.Reserved {
+					add_bit_at_coords_idx = i
+				}
+				if c.IsTimingPattern || c.IsDarkModule {
+					add_bit_at_coords_idx = -1
+					break
+				}
+			}
+		}
+
+		if add_bit_at_coords_idx > -1 && len(horizontal_bits_to_add) > 0 {
+			if horizontal_bits_to_add[0] == 48 {
+				(*coordinates)[add_bit_at_coords_idx].Color = "white"
+			} else {
+				(*coordinates)[add_bit_at_coords_idx].Color = "black"
+			}
+
+			fmt.Printf("\nHORIZONTAL BITS BEFORE: %s\n", horizontal_bits_to_add)
+			horizontal_bits_to_add = horizontal_bits_to_add[1:]
+			fmt.Printf("\nHORIZONTAL BITS AFTER: %s\n", horizontal_bits_to_add)
+		}
+	}
+
+	for y := height - 1; y >= 0; y-- {
+		add_bit_at_coords_idx := -1
+		for i, c := range *coordinates {
+			if c.X == vertical_reserved_space_x && c.Y == y {
+				if c.Reserved {
+					add_bit_at_coords_idx = i
+				}
+				if c.IsTimingPattern || c.IsDarkModule {
+					add_bit_at_coords_idx = -1
+					break
+				}
+			}
+		}
+
+		if add_bit_at_coords_idx > -1 && len(vertical_bits_to_add) > 0 {
+			if vertical_bits_to_add[0] == 48 {
+				(*coordinates)[add_bit_at_coords_idx].Color = "white"
+			} else {
+				(*coordinates)[add_bit_at_coords_idx].Color = "black"
+			}
+
+			vertical_bits_to_add = vertical_bits_to_add[1:]
+		}
+	}
+}
+
+func getCharCountIndicatorBitsLenAndModeIndicatorBits(
+	indicator_mode string,
+) (int, string) {
+	if indicator_mode == "byte_mode" {
+		return 8, "0100"
+	}
+
+	// for alphanumeric
+	return 9, "0010"
+}
+
+// return coords and pixels
+func genQrCode(
+	message string,
+	version int,
+	indicator_mode string,
+	total_bits_required int,
+	ec_codewords_needed int,
+) (*[]QrCoordinate, int) {
+	pixels := determinePixelsFromVersion(version)
+	encoded_msg := encodeMessage(message)
+	// encoded_data := encode(
+	// 	encoded_msg,
+	// 	len(data),
+	// 	"0010",
+	// 	9,
+	// 	104,
+	// )
+	indicator_bits_len, indicator_bits := getCharCountIndicatorBitsLenAndModeIndicatorBits(indicator_mode)
 	encoded_data := encode(
 		encoded_msg,
-		len(data),
-		BYTE_MODE_INDICATOR,
-		CHAR_COUNT_INDICATOR_BITS,
-		TOTAL_BITS_REQUIRED,
+		len(message),
+		indicator_bits,
+		indicator_bits_len,
+		total_bits_required,
 	)
-	fmt.Printf("\n\nTOTAL ENCODED DATA LEN IS: %d\n\n", len(encoded_data))
-	codewords := divideIntoCodeWords(encoded_data)
-	//4-L requires 20 EC codewords per block
-	ec_codewords_needed := 20
-	fmt.Printf("\nCodewords are: %+v\nAmount of codewords: %d\n", codewords, len(codewords))
-	msg_p, msg_p_s := genMessagePolynomial(codewords)
-	fmt.Printf("\nMsg Polynomial is %+v\n", msg_p)
-	fmt.Printf("\nMsg Polynomial string is %+v\n", msg_p_s)
 
+	fmt.Printf("\nEncoded DATA IS: %+v\n", encoded_data)
+	codewords := divideIntoCodeWords(encoded_data)
+	msg_p, _ := genMessagePolynomial(codewords)
 	gen_p := genGeneratorPolynomial(ec_codewords_needed)
-	fmt.Printf("\nGen Polynomial is %+v\n", gen_p)
 
 	// multiply msg polynomial by ec needed
 	for i := range msg_p {
 		msg_p[i].Exp += ec_codewords_needed
 	}
 
+	msg_bits := fromPolynomialToBits(&msg_p)
 	ecc := getEcc(msg_p, gen_p)
 
+	fmt.Printf("\nMSG IN BITS: %s\n", msg_bits)
+	fmt.Printf("\nECC IN BITS: %s\n", fromPolynomialToBits(&ecc))
 	//add msg_p bits and ecc
-	final_bin := fromPolynomialToBits(&msg_p) + fromPolynomialToBits(&ecc)
+	final_bin := msg_bits + fromPolynomialToBits(&ecc)
 	//Remainder bits for ver 4 are 7
-	final_bin += "0000000"
-	fmt.Printf("\nECC POLYNOMIAL IS %+v\n", ecc)
+	// final_bin += "0000000"
 	fmt.Printf("\nFINAL MESSAGE: %s\nLen of it: %d\n", final_bin, len(final_bin))
 
-	coordinates := genQrImageCoordinates()
-	addDataBits(final_bin, &coordinates)
+	coordinates := genCoordinatesForStaticPatterns(
+		pixels,
+		pixels,
+	)
+	addDataBits(final_bin, &coordinates, pixels, pixels)
+	addFormatAndVersionInfo(&coordinates, pixels, pixels)
+
+	return &coordinates, pixels
+}
+
+func main() {
+	coordinates, pixels := genQrCode(
+		"MONDAY LEFT ME BROKEN",
+		VERSION,
+		"byte_mode",
+		TOTAL_BITS_REQUIRED,
+		EC_CODEWORDS_NEEDED,
+	)
 
 	url := "http://localhost:8080"
 
@@ -746,7 +914,10 @@ func main() {
 	})
 
 	http.HandleFunc("/coordinates", func(w http.ResponseWriter, r *http.Request) {
-		json_coordinates, err := json.Marshal(coordinates)
+		json_coordinates, err := json.Marshal(map[string]interface{}{
+			"coordinates": coordinates,
+			"pixels":      pixels,
+		})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

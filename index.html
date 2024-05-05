@@ -7,19 +7,20 @@
 <body style="background-color: #202020">
 	<canvas 
 		id="myCanvas" 
-		width="1920" 
-		height="1080"
-		style="image-rendering: pixelated;image-rendering:crisp-edges"
+		style="image-rendering: pixelated;margin:50px;background-color:white"
 	>
 	</canvas>
 	<script>
 		var canvas = document.getElementById('myCanvas')
 		var ctx = canvas.getContext('2d')
-		let coordinates
 
 		async function renderQrCode() {
 			const response = await fetch("http://localhost:8080/coordinates")
-			coordinates = await response.json()
+			const { coordinates, pixels }= await response.json()
+			canvas.width = pixels * 10
+			canvas.height = pixels * 10
+			canvas.style.padding = `${4 * 10}px`
+			console.log("ass")
 
 			for (var i = 0; i < coordinates.length; i++) {
 				if (!coordinates[i].reserved) {
