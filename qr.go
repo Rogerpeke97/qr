@@ -1,4 +1,4 @@
-package main
+package qr
 
 import (
 	"encoding/json"
@@ -839,51 +839,7 @@ func getCharCountIndicatorBitsLenAndModeIndicatorBits(
 	return 9, "0010"
 }
 
-// return coords and pixels
-func GenQrCode(
-	message string,
-	version int,
-	indicator_mode string,
-	total_bits_required int,
-	ec_codewords_needed int,
-) (*[]QrCoordinate, int) {
-	pixels := determinePixelsFromVersion(version)
-	encoded_msg := encodeMessage(message)
-	indicator_bits_len, indicator_bits := getCharCountIndicatorBitsLenAndModeIndicatorBits(indicator_mode)
-	encoded_data := encode(
-		encoded_msg,
-		len(message),
-		indicator_bits,
-		indicator_bits_len,
-		total_bits_required,
-	)
-
-	codewords := divideIntoCodeWords(encoded_data)
-	msg_p, _ := genMessagePolynomial(codewords)
-	gen_p := genGeneratorPolynomial(ec_codewords_needed)
-
-	// multiply msg polynomial by ec needed
-	for i := range msg_p {
-		msg_p[i].Exp += ec_codewords_needed
-	}
-
-	msg_bits := fromPolynomialToBits(&msg_p)
-	ecc := getEcc(msg_p, gen_p)
-
-	//add msg_p bits and ecc
-	final_bin := msg_bits + fromPolynomialToBits(&ecc)
-
-	coordinates := genCoordinatesForStaticPatterns(
-		pixels,
-		pixels,
-	)
-	addDataBits(final_bin, &coordinates, pixels, pixels)
-	addFormatAndVersionInfo(&coordinates, pixels, pixels)
-
-	return &coordinates, pixels
-}
-
-func main() {
+func GenQrCodeWithServer() {
 	coordinates, pixels := GenQrCode(
 		"https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 		VERSION,
@@ -957,4 +913,48 @@ func main() {
 
 	fmt.Println("Opening URL:", url)
 	log.Fatal(http.ListenAndServe(":8080", nil))
+}
+
+// return coords and pixels
+func GenQrCode(
+	message string,
+	version int,
+	indicator_mode string,
+	total_bits_required int,
+	ec_codewords_needed int,
+) (*[]QrCoordinate, int) {
+	pixels := determinePixelsFromVersion(version)
+	encoded_msg := encodeMessage(message)
+	indicator_bits_len, indicator_bits := getCharCountIndicatorBitsLenAndModeIndicatorBits(indicator_mode)
+	encoded_data := encode(
+		encoded_msg,
+		len(message),
+		indicator_bits,
+		indicator_bits_len,
+		total_bits_required,
+	)
+
+	codewords := divideIntoCodeWords(encoded_data)
+	msg_p, _ := genMessagePolynomial(codewords)
+	gen_p := genGeneratorPolynomial(ec_codewords_needed)
+
+	// multiply msg polynomial by ec needed
+	for i := range msg_p {
+		msg_p[i].Exp += ec_codewords_needed
+	}
+
+	msg_bits := fromPolynomialToBits(&msg_p)
+	ecc := getEcc(msg_p, gen_p)
+
+	//add msg_p bits and ecc
+	final_bin := msg_bits + fromPolynomialToBits(&ecc)
+
+	coordinates := genCoordinatesForStaticPatterns(
+		pixels,
+		pixels,
+	)
+	addDataBits(final_bin, &coordinates, pixels, pixels)
+	addFormatAndVersionInfo(&coordinates, pixels, pixels)
+
+	return &coordinates, pixels
 }
