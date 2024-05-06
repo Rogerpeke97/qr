@@ -27,6 +27,88 @@ type QrCoordinate struct {
 	IsDarkModule    bool   `json:"is_dark_module"`
 }
 
+var UI_HTML = `
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>QR Code Gen</title>
+</head>
+<body style="background-color: #202020">
+	<div>
+		<h3 style="color:white">Enter your QR message or URL</h3>
+		<p style="color:white">
+			This Qr code uses byte mode encoding, version 4, 0 level masking and EC level L.
+			<br>
+			More versions, EC levels, auto masking as well as encoding modes, might be added in the future if I'm still interested
+			in this :)
+
+		</p>
+		<input id="message" type="text" maxlength="78" placeholder="Enter text (up to 78 characters)">
+		<button onclick="newCustomMessageAndRenderQrCode()">Generate!</button>
+
+	</div>
+	<canvas 
+		id="myCanvas" 
+		style="image-rendering: pixelated;image-rendering:crisp-edges;margin-top:20px;background-color:white"
+	>
+	</canvas>
+	<script>
+		var canvas = document.getElementById('myCanvas')
+		var ctx = canvas.getContext('2d')
+		async function render(coordinates, pixels) {
+			for (var i = 0; i < coordinates.length; i++) {
+				if (!coordinates[i].reserved) {
+					continue
+				}
+				ctx.fillStyle = coordinates[i].color
+				ctx.fillRect(coordinates[i].x*10, coordinates[i].y*10, 10, 10)
+
+			}
+
+			for (var i = 0; i < coordinates.length; i++) {
+				if (coordinates[i].reserved) {
+					continue
+				}
+				ctx.fillStyle = coordinates[i].color
+				ctx.fillRect(coordinates[i].x*10, coordinates[i].y*10, 10, 10)
+				await new Promise(resolve => setTimeout(resolve, 5));
+			}
+		}
+
+		async function newCustomMessageAndRenderQrCode () {
+			const input = document.getElementById("message")
+			const response = await fetch("http://localhost:8080/coordinates", {
+				method: "POST",
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					message: input.value,
+				})
+			})
+			const { coordinates, pixels }= await response.json()
+			canvas.width = pixels * 10
+			canvas.height = pixels * 10
+			canvas.style.padding = (4 * 10) + "px"
+			render(coordinates, pixels)
+		}
+
+		async function renderQrCode() {
+			const response = await fetch("http://localhost:8080/coordinates")
+			const { coordinates, pixels }= await response.json()
+			canvas.width = pixels * 10
+			canvas.height = pixels * 10
+			canvas.style.padding = (4 * 10) + "px"
+			render(coordinates, pixels)
+		}
+
+		renderQrCode()
+	</script>
+</body>
+</html>
+`
+
 // Encoded data starts with the mode
 var FINDER_PATTERN_W_H = 7
 var SEPARATOR_W_H = FINDER_PATTERN_W_H + 1
@@ -851,7 +933,8 @@ func GenQrCodeWithServer() {
 	url := "http://localhost:8080"
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "index.html")
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprint(w, UI_HTML)
 	})
 
 	http.HandleFunc("/coordinates", func(w http.ResponseWriter, r *http.Request) {
